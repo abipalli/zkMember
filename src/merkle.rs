@@ -2,7 +2,7 @@ use ark_crypto_primitives::{crh::TwoToOneCRH, merkle_tree::Config, MerkleTree, P
 
 use crate::crypto::{LeafHash, TwoToOneHash};
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct MerkleConfig;
 impl Config for MerkleConfig {
     type LeafHash = LeafHash;
@@ -11,6 +11,7 @@ impl Config for MerkleConfig {
 
 #[allow(dead_code)]
 pub type MembershipTree = MerkleTree<MerkleConfig>;
+
 pub type Root = <TwoToOneHash as TwoToOneCRH>::Output;
 pub type SimplePath = Path<MerkleConfig>;
 
@@ -25,8 +26,8 @@ fn test_merkle_tree() {
     let two_to_one_crh_params = <TwoToOneHash as CRH>::setup(&mut rng).unwrap();
 
     let members = [
-        Member::new("1", "1@usc.edu", None),
-        Member::new("2", "2@usc.edu", None),
+        Member::new("1".into(), "1@usc.edu".into(), None),
+        Member::new("2".into(), "2@usc.edu".into(), None),
     ];
 
     let tree: MerkleTree<MerkleConfig> =

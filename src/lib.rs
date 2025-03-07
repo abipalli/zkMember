@@ -1,6 +1,6 @@
 pub mod member;
 
-mod crypto;
-mod merkle;
+pub mod crypto;
+pub mod merkle;
 
 pub mod circuit;
