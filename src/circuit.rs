@@ -1,10 +1,9 @@
 use ark_crypto_primitives::{
     crh::{TwoToOneCRH, TwoToOneCRHGadget},
-    MerkleTree, PathVar, CRH,
+    PathVar, CRH,
 };
 use ark_r1cs_std::{eq::EqGadget, prelude::Boolean, uint8::UInt8};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
-use ark_std::rand::seq::SliceRandom;
+use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 
 use crate::{
     crypto::{
@@ -12,7 +11,7 @@ use crate::{
         TwoToOneHashParamsVar,
     },
     member::Member,
-    merkle::{MembershipTree, MerkleConfig, Root, SimplePath},
+    merkle::{MerkleConfig, Root, SimplePath},
 };
 
 /// R1CS representation of the Merkle tree root.
@@ -85,6 +84,8 @@ impl<'a> ConstraintSynthesizer<ConstraintF> for MerkleTreeVerification<'a> {
 
 #[test]
 fn merkle_tree_constraints_correctness() {
+    use crate::merkle::MembershipTree;
+    use ark_crypto_primitives::MerkleTree;
     use ark_relations::r1cs::{ConstraintLayer, ConstraintSystem, TracingMode};
     use tracing_subscriber::layer::SubscriberExt;
 
@@ -149,6 +150,9 @@ fn merkle_tree_constraints_correctness() {
 
 #[test]
 fn merkle_tree_constraints_soundness() {
+    use crate::merkle::MembershipTree;
+    use ark_relations::r1cs::ConstraintSystem;
+
     // Let's set up an RNG for use within tests. Note that this is *not* safe
     // for any production use.
     let mut rng = ark_std::test_rng();
@@ -180,13 +184,12 @@ fn merkle_tree_constraints_soundness() {
         Member::new("8", "8@usc.edu", None),
     ];
 
-    let tree = crate::MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization1)
-        .unwrap();
+    let tree =
+        MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization1).unwrap();
 
     // We just mutate the first leaf
     let second_tree =
-        crate::MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization2)
-            .unwrap();
+        MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization2).unwrap();
 
     let proof = tree.generate_proof(4).unwrap();
 
