@@ -33,11 +33,11 @@ fn test_merkle_tree() {
     let tree: MerkleTree<MerkleConfig> =
         MembershipTree::new::<Member>(&leaf_crh_params, &two_to_one_crh_params, &members).unwrap();
 
-    let proof: Path<MerkleConfig> = tree.generate_proof(1).unwrap();
+    let path: SimplePath = tree.generate_proof(1).unwrap();
     let root = tree.root();
 
     // Next, let's verify the proof!
-    let result = proof
+    let result = path
         .verify(
             &leaf_crh_params,
             &two_to_one_crh_params,

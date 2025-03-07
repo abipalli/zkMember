@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 
-#[derive(Clone)]
-pub(crate) struct Member<'a> {
+#[derive(Clone, Copy)]
+pub struct Member<'a> {
     // private fields
     id: &'a str,
     email: &'a str,
