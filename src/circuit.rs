@@ -3,7 +3,7 @@ use ark_crypto_primitives::{
     MerkleTree, PathVar, CRH,
 };
 use ark_r1cs_std::{eq::EqGadget, prelude::Boolean, uint8::UInt8};
-use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, SynthesisError};
 use ark_std::rand::seq::SliceRandom;
 
 use crate::{
@@ -68,6 +68,12 @@ impl<'a> ConstraintSynthesizer<ConstraintF> for MerkleTreeVerification<'a> {
                     .ok_or(SynthesisError::AssignmentMissing)
             })?;
 
+        // Add constraint to ensure minimum leaf size
+        let leaf_size = UInt8::new_input(ark_relations::ns!(cs, "leaf_size"), || {
+            Ok(leaf_bytes.len() as u8)
+        })?;
+        leaf_size.enforce_not_equal(&UInt8::constant(0u8))?;
+
         let is_member: Boolean<ConstraintF> =
             path.verify_membership(&leaf_crh_params, &two_to_one_crh_params, &root, &leaf_bytes)?;
 
@@ -127,6 +133,11 @@ fn merkle_tree_constraints_correctness() {
     // Next, let's make the circuit!
     let cs = ConstraintSystem::new_ref();
     circuit.generate_constraints(cs.clone()).unwrap();
+
+    println!("Public inputs: {}", cs.num_instance_variables());
+    println!("Private witnesses: {}", cs.num_witness_variables());
+    println!("Total constraints: {}", cs.num_constraints());
+
     // Let's check whether the constraint system is satisfied
     let is_satisfied = cs.is_satisfied().unwrap();
     if !is_satisfied {
@@ -138,9 +149,6 @@ fn merkle_tree_constraints_correctness() {
 
 #[test]
 fn merkle_tree_constraints_soundness() {
-    use ark_relations::r1cs::{ConstraintLayer, ConstraintSystem, TracingMode};
-    use tracing_subscriber::layer::SubscriberExt;
-
     // Let's set up an RNG for use within tests. Note that this is *not* safe
     // for any production use.
     let mut rng = ark_std::test_rng();
@@ -197,15 +205,15 @@ fn merkle_tree_constraints_soundness() {
         // witness
         authentication_path: Some(proof),
     };
-    // First, some boilerplate that helps with debugging
-    let mut layer = ConstraintLayer::default();
-    layer.mode = TracingMode::OnlyConstraints;
-    let subscriber = tracing_subscriber::Registry::default().with(layer);
-    let _guard = tracing::subscriber::set_default(subscriber);
 
-    // Next, let's make the constraint system!
+    // First, let's make the constraint system!
     let cs = ConstraintSystem::new_ref();
     circuit.generate_constraints(cs.clone()).unwrap();
+
+    println!("Public inputs: {}", cs.num_instance_variables());
+    println!("Private witnesses: {}", cs.num_witness_variables());
+    println!("Total constraints: {}", cs.num_constraints());
+
     // Let's check whether the constraint system is satisfied
     let is_satisfied = cs.is_satisfied().unwrap();
     // We expect this to fail!
