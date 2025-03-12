@@ -2,12 +2,13 @@ use ark_crypto_primitives::CRH;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
 use ark_serialize::CanonicalSerialize;
 use dialoguer::{theme::ColorfulTheme, Select};
-
 use zkmember::{
-    circuit::MerkleTreeCircuit,
-    crypto::{LeafHash, TwoToOneHash},
+    ed_on_bls12_381::{
+        circuit::MerkleTreeCircuit,
+        common::{LeafHash, TwoToOneHash},
+    },
     member::Member,
-    merkle::{new_membership_tree, MembershipTree, Root},
+    membership::{new_membership_tree, Root},
 };
 
 fn main() {
@@ -64,8 +65,7 @@ fn main() {
 
                 if let Some(index) = members.iter().position(|member| member.id == id) {
                     let tree =
-                        MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &members)
-                            .unwrap();
+                        new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &members);
 
                     let root = tree.root();
                     let proof = tree.generate_proof(index).unwrap();

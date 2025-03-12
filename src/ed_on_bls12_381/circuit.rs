@@ -5,15 +5,6 @@ use ark_crypto_primitives::{
 use ark_r1cs_std::{eq::EqGadget, prelude::Boolean, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 
-use crate::{
-    crypto::{
-        ConstraintF, LeafHash, LeafHashGadget, LeafHashParamsVar, TwoToOneHash, TwoToOneHashGadget,
-        TwoToOneHashParamsVar,
-    },
-    member::Member,
-    merkle::{MerkleConfig, Root, SimplePath},
-};
-
 /// R1CS representation of the Merkle tree root.
 pub type RootVar = <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, ConstraintF>>::OutputVar;
 
@@ -36,6 +27,17 @@ pub struct MerkleTreeCircuit<'a> {
 }
 
 use ark_r1cs_std::alloc::AllocVar;
+
+use crate::{
+    member::Member,
+    membership::{MerkleConfig, Root, SimplePath},
+};
+
+use super::common::{
+    ConstraintF, LeafHash, LeafHashGadget, LeafHashParamsVar, TwoToOneHash, TwoToOneHashGadget,
+    TwoToOneHashParamsVar,
+};
+
 impl<'a> ConstraintSynthesizer<ConstraintF> for MerkleTreeCircuit<'a> {
     fn generate_constraints(
         self,
@@ -88,10 +90,12 @@ mod tests {
     use ark_relations::r1cs::ConstraintSynthesizer;
 
     use crate::{
-        circuit::MerkleTreeCircuit,
-        crypto::{LeafHash, TwoToOneHash},
+        ed_on_bls12_381::{
+            circuit::MerkleTreeCircuit,
+            common::{LeafHash, TwoToOneHash},
+        },
         member::Member,
-        merkle::{MembershipTree, MerkleConfig, SimplePath},
+        membership::{MembershipTree, MerkleConfig, SimplePath},
     };
 
     #[test]

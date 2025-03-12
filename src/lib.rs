@@ -1,6 +1,3 @@
+pub mod ed_on_bls12_381;
 pub mod member;
-
-pub mod crypto;
-pub mod merkle;
-
-pub mod circuit;
+pub mod membership;

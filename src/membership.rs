@@ -1,7 +1,7 @@
 use ark_crypto_primitives::{crh::TwoToOneCRH, merkle_tree::Config, MerkleTree, Path, CRH};
 
 use crate::{
-    crypto::{LeafHash, TwoToOneHash},
+    ed_on_bls12_381::common::{LeafHash, TwoToOneHash},
     member::Member,
 };
 
@@ -44,6 +44,7 @@ fn clean_members_list(members: &Vec<Member>) -> Vec<Member> {
 
 #[cfg(test)]
 mod test_new_membership_tree {
+
     use crate::member::Member;
 
     use super::clean_members_list as new_membership_tree;
@@ -76,7 +77,6 @@ pub type SimplePath = Path<MerkleConfig>;
 
 #[test]
 fn test_merkle_tree() {
-    use crate::member::Member;
     use ark_crypto_primitives::crh::CRH;
 
     let mut rng = ark_std::test_rng();
