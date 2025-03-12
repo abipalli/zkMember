@@ -9,7 +9,7 @@ pub struct Member {
     end_date: Option<DateTime<Utc>>,
 }
 
-impl<'a> serde::Serialize for Member {
+impl serde::Serialize for Member {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -23,7 +23,7 @@ impl<'a> serde::Serialize for Member {
     }
 }
 
-impl<'de: 'a, 'a> serde::Deserialize<'de> for Member {
+impl<'de> serde::Deserialize<'de> for Member {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

@@ -1,6 +1,9 @@
-use ark_crypto_primitives::{crh::TwoToOneCRH, merkle_tree::Config, MerkleTree, Path};
+use ark_crypto_primitives::{crh::TwoToOneCRH, merkle_tree::Config, MerkleTree, Path, CRH};
 
-use crate::crypto::{LeafHash, TwoToOneHash};
+use crate::{
+    crypto::{LeafHash, TwoToOneHash},
+    member::Member,
+};
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct MerkleConfig;
@@ -11,6 +14,62 @@ impl Config for MerkleConfig {
 
 #[allow(dead_code)]
 pub type MembershipTree = MerkleTree<MerkleConfig>;
+
+pub fn new_membership_tree(
+    leaf_crh_params: &<LeafHash as CRH>::Parameters,
+    two_to_one_crh_params: &<TwoToOneHash as CRH>::Parameters,
+    members: &Vec<Member>,
+) -> MembershipTree {
+    MembershipTree::new(
+        leaf_crh_params,
+        two_to_one_crh_params,
+        clean_members_list(members).as_slice(),
+    )
+    .unwrap()
+}
+
+fn clean_members_list(members: &Vec<Member>) -> Vec<Member> {
+    let num_members = members.len();
+    let num_empty = if num_members == 1 {
+        1
+    } else {
+        num_members.next_power_of_two() - num_members
+    };
+
+    let mut cleaned_members_list = members.clone();
+    cleaned_members_list.append(&mut vec![Member::default(); num_empty]);
+
+    cleaned_members_list
+}
+
+#[cfg(test)]
+mod test_new_membership_tree {
+    use crate::member::Member;
+
+    use super::clean_members_list as new_membership_tree;
+
+    #[test]
+    fn one() {
+        let cleaned_list = new_membership_tree(&vec![Member::default()]);
+        assert!(cleaned_list.len().next_power_of_two() == 2)
+    }
+
+    #[test]
+    fn two() {
+        let cleaned_list = new_membership_tree(&vec![Member::default(), Member::default()]);
+        assert!(cleaned_list.len().next_power_of_two() == 2)
+    }
+
+    #[test]
+    fn three() {
+        let cleaned_list = new_membership_tree(&vec![
+            Member::default(),
+            Member::default(),
+            Member::default(),
+        ]);
+        assert!(cleaned_list.len() == 4)
+    }
+}
 
 pub type Root = <TwoToOneHash as TwoToOneCRH>::Output;
 pub type SimplePath = Path<MerkleConfig>;
