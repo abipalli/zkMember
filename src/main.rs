@@ -1,6 +1,6 @@
-use ark_crypto_primitives::CRH;
+use ark_crypto_primitives::{Path, CRH};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
     ed_on_bls12_381::{
@@ -8,7 +8,7 @@ use zkmember::{
         common::{LeafHash, TwoToOneHash},
     },
     member::Member,
-    membership::{new_membership_tree, Root},
+    membership::{new_membership_tree, MerkleConfig, Root},
 };
 
 fn main() {
@@ -26,6 +26,7 @@ fn main() {
         let options = &[
             "Register a new member",
             "Generate a proof for a member",
+            "Verify proof",
             "Exit",
         ];
         let selection = Select::with_theme(&ColorfulTheme::default())
@@ -93,7 +94,61 @@ fn main() {
                     println!("\x1b[0;31mMember not found\x1b[0m");
                 }
             }
-            2 => break,
+            2 => {
+                let member_id = dialoguer::Input::<String>::new()
+                    .with_prompt("Enter member id")
+                    .interact_text()
+                    .unwrap();
+
+                if let Some(index) = members.iter().position(|m| m.id == member_id) {
+                    let root_hex = dialoguer::Input::<String>::new()
+                        .with_prompt("Enter root (hex)")
+                        .interact_text()
+                        .unwrap();
+
+                    let path_hex = dialoguer::Input::<String>::new()
+                        .with_prompt("Enter path (hex)")
+                        .interact_text()
+                        .unwrap();
+
+                    match (hex::decode(&root_hex), hex::decode(&path_hex)) {
+                        (Ok(root_bytes), Ok(path_bytes)) => {
+                            match (
+                                Root::deserialize(&*root_bytes),
+                                Path::<MerkleConfig>::deserialize(&*path_bytes),
+                            ) {
+                                (Ok(root), Ok(proof)) => {
+                                    let circuit = MerkleTreeCircuit {
+                                        leaf_crh_params: &leaf_crh_params,
+                                        two_to_one_crh_params: &two_to_one_crh_params,
+                                        root,
+                                        leaf: members.get(index).unwrap(),
+                                        authentication_path: Some(proof),
+                                    };
+
+                                    let cs = ConstraintSystem::new_ref();
+                                    match circuit.generate_constraints(cs.clone()) {
+                                Ok(_) => {
+                                    match cs.is_satisfied() {
+                                        Ok(true) => println!("\x1b[0;32mProof verification successful!\x1b[0m"),
+                                        Ok(false) => println!("\x1b[0;31mProof verification failed: constraints not satisfied\x1b[0m"),
+                                        Err(e) => println!("\x1b[0;31mError checking constraints: {}\x1b[0m", e),
+                                    }
+                                },
+                                Err(e) => println!("\x1b[0;31mError generating constraints: {}\x1b[0m", e),
+                                }
+                                }
+                                _ => {
+                                    println!("\x1b[0;31mFailed to deserialize root or proof\x1b[0m")
+                                }
+                            }
+                        }
+                        _ => println!("\x1b[0;31mInvalid hex encoding\x1b[0m"),
+                    }
+                } else {
+                    println!("\x1b[0;31mUnable to identify member\x1b[0m")
+                }
+            }
             _ => unreachable!(),
         }
         println!()

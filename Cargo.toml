@@ -10,7 +10,9 @@ ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-snark = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
-ark-serialize = { version = "^0.3.0", default-features = false }
+ark-serialize = { version = "^0.3.0", default-features = false, features = [
+	"derive",
+] }
 ark-crypto-primitives = { version = "^0.3.0", default-features = true, features = [
 	"r1cs",
 ] }
