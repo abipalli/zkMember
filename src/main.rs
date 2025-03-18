@@ -10,7 +10,6 @@ use zkmember::{
     member::Member,
     membership::{new_membership_tree, Root},
 };
-
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
 
@@ -47,7 +46,8 @@ fn main() {
                     .allow_empty(false)
                     .interact_text()
                     .unwrap();
-                members.push(Member::new(id.into(), email.into(), None));
+                // members.push(Member::new(id.into(), email.into(), None));
+                members.push(Member::with_padding(id.into(), email.into(), None, 10)); // testing member with padding
                 println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 
                 let tree = new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &members);
