@@ -1,2 +1,3 @@
+pub mod commitments;
 pub mod member;
-pub mod pedersen381;
+pub mod snarks;

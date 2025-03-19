@@ -5,11 +5,11 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
-    member::Member,
-    pedersen381::{
+    commitments::pedersen381::{
         common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
         constraint::MerkleTreeCircuit,
     },
+    member::Member,
 };
 
 fn main() {
@@ -112,7 +112,7 @@ fn main() {
                     let mut root_serialization = Vec::new();
                     root.serialize(&mut root_serialization).unwrap();
                     println!(
-                        "\x1b[0;33mRoot: {}\x1b[0m",
+                        "\x1b[0;34mRoot: {}\x1b[0m",
                         hex::encode(&root_serialization)
                     );
 
