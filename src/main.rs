@@ -7,7 +7,7 @@ use zkmember::{
         circuit::MerkleTreeCircuit,
         common::{LeafHash, TwoToOneHash},
     },
-    member::Member,
+    member::{generate_members, Member},
     membership::{new_membership_tree, Root},
 };
 fn main() {
@@ -20,6 +20,7 @@ fn main() {
 
     // public store
     let mut root: Option<Root>;
+    generate_members(&mut members, 10); // is this safe
 
     loop {
         let options = &[

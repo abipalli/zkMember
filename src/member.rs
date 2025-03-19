@@ -139,6 +139,15 @@ impl Member {
     }
 }
 
+pub fn generate_members(members: &mut Box<Vec<Member>>, amount: u32){
+    for i in 0..amount{
+        let id = i.to_string();
+        let email = id.clone();
+        members.push(Member::new(id, email, None));
+    }
+    println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
