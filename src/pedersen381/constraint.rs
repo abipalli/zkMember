@@ -32,7 +32,7 @@ pub struct MerkleTreeCircuit<'a> {
 
     // These are the public inputs to the circuit
     pub root: Root,
-    pub leaf: Vec<u8>,
+    pub leaf_hash: Pedersen381Field,
 
     // This is the private witness to the circuit
     pub authentication_path: Option<MerklePath>,
@@ -52,16 +52,8 @@ impl<'a> ConstraintSynthesizer<Pedersen381Field> for MerkleTreeCircuit<'a> {
         let root =
             PedersenRootVar::new_input(ark_relations::ns!(cs, "root_var"), || Ok(&self.root))?;
 
-        let leaf_as_uint8: Vec<UInt8<Pedersen381Field>> = self
-            .leaf
-            .iter()
-            .map(|byte| UInt8::new_input(cs.clone(), || Ok(*byte)))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let hashed_leaf: PedersenLeafVar = <LeafHashGadget as CRHGadget<
-            LeafHash,
-            Pedersen381Field,
-        >>::evaluate(&leaf_crh_params, &leaf_as_uint8)?;
+        let hashed_leaf: PedersenLeafVar =
+            PedersenLeafVar::new_input(ark_relations::ns!(cs, "leaf_var"), || Ok(&self.leaf_hash))?;
 
         // Allocate path as witness
         let path: PedersenPathVar =
@@ -119,9 +111,9 @@ mod tests {
             Member::new("2".into(), "2@usc.edu".into(), None),
         ];
 
-        let leaves = members.clone().map(|member| {
-            <LeafHash as CRH>::evaluate(&leaf_crh_params, &member.to_bytes()).unwrap()
-        });
+        let leaves = members
+            .clone()
+            .map(|member| member.hash::<LeafHash>(&leaf_crh_params));
 
         let tree: MerkleTree<MerkleConfig> =
             MerkleTree::new(&leaf_crh_params, &two_to_one_crh_params, &leaves).unwrap();
@@ -139,7 +131,7 @@ mod tests {
 
             // public inputs
             root,
-            leaf: members[1].to_bytes(),
+            leaf_hash: members[1].hash::<LeafHash>(&leaf_crh_params),
 
             // witness
             authentication_path: Some(path),
@@ -228,7 +220,8 @@ mod tests {
 
             // public inputs
             root: wrong_root,
-            leaf: Member::new("5".into(), "5@usc.edu".into(), None).to_bytes(),
+            leaf_hash: Member::new("5".into(), "5@usc.edu".into(), None)
+                .hash::<LeafHash>(&leaf_crh_params),
 
             // witness
             authentication_path: Some(proof),

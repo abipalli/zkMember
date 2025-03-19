@@ -47,7 +47,7 @@ mod groth16_tests {
             leaf_crh_params: &leaf_crh_params,
             two_to_one_crh_params: &two_to_one_crh_params,
             root,
-            leaf: members[1].to_bytes(),
+            leaf_hash: members[1].hash::<LeafHash>(&leaf_crh_params),
             authentication_path: Some(merkle_path),
         };
 
@@ -59,8 +59,7 @@ mod groth16_tests {
         let proof = Groth16::<Bls12_381>::prove(&pk, circuit.clone(), &mut rng).unwrap();
 
         // Calculate public inputs
-        let mut public_inputs: Vec<_> = vec![root];
-        // public_inputs.extend_from_slice(members[1].to_bytes().as_slice()); // TODO: Fix this
+        let public_inputs: Vec<_> = vec![root, members[1].hash::<LeafHash>(&leaf_crh_params)];
 
         // Verify the proof
         let verified =
