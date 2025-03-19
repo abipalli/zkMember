@@ -120,4 +120,68 @@ mod tests {
         // Verify that serialization includes all fields
         assert!(bytes.len() > member.id.len() + member.email.len());
     }
+
+    #[test]
+    fn test_serde_serialization() {
+        let member = Member::default();
+        let serialized = serde_json::to_string(&member).expect("Failed to serialize Member");
+        println!("Serialized Member: {}", serialized);
+
+        // Verify that the serialized JSON contains the expected fields
+        assert!(serialized.contains(&member.id));
+        assert!(serialized.contains(&member.email));
+        assert!(serialized.contains(&member.join_date.to_rfc3339()));
+    }
+
+    #[test]
+    fn test_serde_deserialization() {
+        let json_data = r#"
+        {
+            "id": "987654321",
+            "email": "test@usc.edu",
+            "join_date": "2023-01-01T00:00:00Z",
+            "end_date": "2023-12-31T23:59:59Z"
+        }
+        "#;
+
+        let member: Member = serde_json::from_str(json_data).expect("Failed to deserialize Member");
+        assert_eq!(member.id, "987654321");
+        assert_eq!(member.email, "test@usc.edu");
+        assert_eq!(
+            member.join_date,
+            DateTime::parse_from_rfc3339("2023-01-01T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc)
+        );
+        assert_eq!(
+            member.end_date,
+            Some(
+                DateTime::parse_from_rfc3339("2023-12-31T23:59:59Z")
+                    .unwrap()
+                    .with_timezone(&Utc)
+            )
+        );
+    }
+
+    #[test]
+    fn test_serde_round_trip() {
+        let member = Member::new(
+            "123456789".to_string(),
+            "roundtrip@usc.edu".to_string(),
+            Some(
+                DateTime::parse_from_rfc3339("2023-12-31T23:59:59Z")
+                    .unwrap()
+                    .with_timezone(&Utc),
+            ),
+        );
+
+        let serialized = serde_json::to_string(&member).expect("Failed to serialize Member");
+        let deserialized: Member =
+            serde_json::from_str(&serialized).expect("Failed to deserialize Member");
+
+        assert_eq!(member.id, deserialized.id);
+        assert_eq!(member.email, deserialized.email);
+        assert_eq!(member.join_date, deserialized.join_date);
+        assert_eq!(member.end_date, deserialized.end_date);
+    }
 }
