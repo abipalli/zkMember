@@ -1,9 +1,6 @@
 use ark_crypto_primitives::CRH;
-use ark_ff::{BigInteger, PrimeField};
 use chrono::{DateTime, Utc};
 use serde::ser::SerializeStruct;
-
-use crate::pedersen381::common::LeafHash;
 
 #[derive(Clone)]
 pub struct Member {

@@ -176,8 +176,6 @@ mod membership_tree_tests {
     fn merkle_tree() {
         use ark_crypto_primitives::crh::CRH;
 
-        let mut rng = ark_std::test_rng();
-
         let (leaf_crh_params, two_to_one_crh_params) = setup();
 
         let members = [

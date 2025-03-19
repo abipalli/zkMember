@@ -2,16 +2,12 @@ use super::common::{
     LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen381Field, Root,
     TwoToOneHash, TwoToOneHashGadget, TwoToOneHashParamsVar,
 };
-use crate::member::Member;
-use ark_ed_on_bls12_381::{Fr, FrParameters};
-use ark_ff::Fp256;
-use ark_r1cs_std::alloc::AllocVar;
-
 use ark_crypto_primitives::{
     crh::{CRHGadget, TwoToOneCRH, TwoToOneCRHGadget},
     PathVar, CRH,
 };
-use ark_r1cs_std::{eq::EqGadget, prelude::Boolean, uint8::UInt8};
+use ark_r1cs_std::alloc::AllocVar;
+use ark_r1cs_std::{eq::EqGadget, prelude::Boolean};
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 
 /// R1CS representation of the Merkle tree root.
@@ -84,9 +80,7 @@ mod tests {
     use crate::{
         member::Member,
         pedersen381::{
-            common::{
-                LeafHash, MembershipTree, MerkleConfig, MerklePath, Pedersen381Field, TwoToOneHash,
-            },
+            common::{LeafHash, MembershipTree, MerkleConfig, MerklePath, TwoToOneHash},
             constraint::MerkleTreeCircuit,
         },
     };
