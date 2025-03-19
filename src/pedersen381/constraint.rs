@@ -1,18 +1,26 @@
+use super::common::{
+    LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen381Field, Root,
+    TwoToOneHash, TwoToOneHashGadget, TwoToOneHashParamsVar,
+};
 use ark_crypto_primitives::{
-    crh::{TwoToOneCRH, TwoToOneCRHGadget},
+    crh::{CRHGadget, TwoToOneCRH, TwoToOneCRHGadget},
     PathVar, CRH,
 };
-use ark_r1cs_std::{eq::EqGadget, prelude::Boolean, uint8::UInt8};
+use ark_r1cs_std::alloc::AllocVar;
+use ark_r1cs_std::{eq::EqGadget, prelude::Boolean};
 use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 
 /// R1CS representation of the Merkle tree root.
-pub type RootVar = <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, ConstraintF>>::OutputVar;
+pub type PedersenRootVar =
+    <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, Pedersen381Field>>::OutputVar;
+
+pub type PedersenLeafVar = <LeafHashGadget as CRHGadget<LeafHash, Pedersen381Field>>::OutputVar;
 
 /// R1CS representation of the Merkle tree path.
-pub type SimplePathVar = PathVar<MerkleConfig, LeafHashGadget, TwoToOneHashGadget, ConstraintF>;
+pub type PedersenPathVar =
+    PathVar<MerkleConfig, LeafHashGadget, TwoToOneHashGadget, Pedersen381Field>;
 
-////////////////////////////////////////////////////////////////////////////////
-
+#[derive(Clone)]
 pub struct MerkleTreeCircuit<'a> {
     // constants that will be embedded into the circuit
     pub leaf_crh_params: &'a <LeafHash as CRH>::Parameters,
@@ -20,28 +28,16 @@ pub struct MerkleTreeCircuit<'a> {
 
     // These are the public inputs to the circuit
     pub root: Root,
-    pub authentication_path: Option<SimplePath>,
+    pub leaf_hash: Pedersen381Field,
 
     // This is the private witness to the circuit
-    pub leaf: &'a Member,
+    pub authentication_path: Option<MerklePath>,
 }
 
-use ark_r1cs_std::alloc::AllocVar;
-
-use crate::{
-    member::Member,
-    membership::{MerkleConfig, Root, SimplePath},
-};
-
-use super::common::{
-    ConstraintF, LeafHash, LeafHashGadget, LeafHashParamsVar, TwoToOneHash, TwoToOneHashGadget,
-    TwoToOneHashParamsVar,
-};
-
-impl<'a> ConstraintSynthesizer<ConstraintF> for MerkleTreeCircuit<'a> {
+impl<'a> ConstraintSynthesizer<Pedersen381Field> for MerkleTreeCircuit<'a> {
     fn generate_constraints(
         self,
-        cs: ark_relations::r1cs::ConstraintSystemRef<ConstraintF>,
+        cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen381Field>,
     ) -> ark_relations::r1cs::Result<()> {
         // Allocate parameters as constants
         let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), self.leaf_crh_params)?;
@@ -49,34 +45,26 @@ impl<'a> ConstraintSynthesizer<ConstraintF> for MerkleTreeCircuit<'a> {
             TwoToOneHashParamsVar::new_constant(cs.clone(), self.two_to_one_crh_params)?;
 
         // Allocate public inputs
-        let root = RootVar::new_input(ark_relations::ns!(cs, "root_var"), || Ok(&self.root))?;
+        let root =
+            PedersenRootVar::new_input(ark_relations::ns!(cs, "root_var"), || Ok(&self.root))?;
 
-        // Allocate path as input
-        let path: SimplePathVar =
-            SimplePathVar::new_input(ark_relations::ns!(cs, "path_var"), || {
+        let hashed_leaf: PedersenLeafVar =
+            PedersenLeafVar::new_input(ark_relations::ns!(cs, "leaf_var"), || Ok(&self.leaf_hash))?;
+
+        // Allocate path as witness
+        let path: PedersenPathVar =
+            PedersenPathVar::new_witness(ark_relations::ns!(cs, "path_witness"), || {
                 self.authentication_path
                     .as_ref()
                     .ok_or(SynthesisError::AssignmentMissing)
             })?;
 
-        let leaf_bytes: Vec<UInt8<ConstraintF>> = self
-            .leaf
-            .to_bytes()
-            .iter()
-            .enumerate()
-            // .map(|(i, byte)| UInt8::new_input(ark_relations::ns!(cs, &name), || Ok(byte)))
-            .map(|(_, byte)| UInt8::new_input(cs.clone(), || Ok(byte)))
-            .collect::<Result<Vec<_>, _>>()?;
-        let leaf_bytes = leaf_bytes.as_slice();
-
-        // Add constraint to ensure minimum leaf size
-        let leaf_size = UInt8::new_input(ark_relations::ns!(cs, "leaf_size"), || {
-            Ok(leaf_bytes.len() as u8)
-        })?;
-        leaf_size.enforce_not_equal(&UInt8::constant(0u8))?;
-
-        let is_member: Boolean<ConstraintF> =
-            path.verify_membership(&leaf_crh_params, &two_to_one_crh_params, &root, &leaf_bytes)?;
+        let is_member: Boolean<Pedersen381Field> = path.verify_membership(
+            &leaf_crh_params,
+            &two_to_one_crh_params,
+            &root,
+            &hashed_leaf,
+        )?;
 
         is_member.enforce_equal(&Boolean::TRUE)?;
 
@@ -90,12 +78,11 @@ mod tests {
     use ark_relations::r1cs::ConstraintSynthesizer;
 
     use crate::{
-        ed_on_bls12_381::{
-            circuit::MerkleTreeCircuit,
-            common::{LeafHash, TwoToOneHash},
-        },
         member::Member,
-        membership::{MembershipTree, MerkleConfig, SimplePath},
+        pedersen381::{
+            common::{LeafHash, MembershipTree, MerkleConfig, MerklePath, TwoToOneHash},
+            constraint::MerkleTreeCircuit,
+        },
     };
 
     #[test]
@@ -118,11 +105,15 @@ mod tests {
             Member::new("2".into(), "2@usc.edu".into(), None),
         ];
 
+        let leaves = members
+            .clone()
+            .map(|member| member.hash::<LeafHash>(&leaf_crh_params));
+
         let tree: MerkleTree<MerkleConfig> =
-            MerkleTree::new::<Member>(&leaf_crh_params, &two_to_one_crh_params, &members).unwrap();
+            MerkleTree::new(&leaf_crh_params, &two_to_one_crh_params, &leaves).unwrap();
 
         // Now, let's try to generate a membership proof for the 5th item, i.e. 9.
-        let path: SimplePath = tree.generate_proof(1).unwrap();
+        let path: MerklePath = tree.generate_proof(1).unwrap();
 
         // First, let's get the root we want to verify against:
         let root = tree.root();
@@ -134,7 +125,7 @@ mod tests {
 
             // public inputs
             root,
-            leaf: &members[1],
+            leaf_hash: members[1].hash::<LeafHash>(&leaf_crh_params),
 
             // witness
             authentication_path: Some(path),
@@ -198,12 +189,18 @@ mod tests {
             Member::new("8".into(), "8@usc.edu".into(), None),
         ];
 
+        let org1_leaves = organization1
+            .clone()
+            .map(|m| <LeafHash as CRH>::evaluate(&leaf_crh_params, &m.to_bytes()).unwrap());
+        let org2_leaves = organization2
+            .clone()
+            .map(|m| <LeafHash as CRH>::evaluate(&leaf_crh_params, &m.to_bytes()).unwrap());
         let tree =
-            MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization1).unwrap();
+            MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &org1_leaves).unwrap();
 
         // We just mutate the first leaf
         let second_tree =
-            MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &organization2).unwrap();
+            MembershipTree::new(&leaf_crh_params, &two_to_one_crh_params, &org2_leaves).unwrap();
 
         let proof = tree.generate_proof(4).unwrap();
 
@@ -217,7 +214,8 @@ mod tests {
 
             // public inputs
             root: wrong_root,
-            leaf: &Member::new("5".into(), "5@usc.edu".into(), None),
+            leaf_hash: Member::new("5".into(), "5@usc.edu".into(), None)
+                .hash::<LeafHash>(&leaf_crh_params),
 
             // witness
             authentication_path: Some(proof),

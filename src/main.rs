@@ -1,18 +1,20 @@
+use ark_bls12_381::Bls12_381;
 use ark_crypto_primitives::CRH;
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
-use ark_serialize::CanonicalSerialize;
+use ark_groth16::{Groth16, Proof, VerifyingKey};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
-    ed_on_bls12_381::{
-        circuit::MerkleTreeCircuit,
-        common::{LeafHash, TwoToOneHash},
-    },
     member::Member,
-    membership::{new_membership_tree, Root},
+    pedersen381::{
+        common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
+        constraint::MerkleTreeCircuit,
+    },
 };
 
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
+    let mut _last_circuit: Option<MerkleTreeCircuit>;
 
     let mut rng = ark_std::test_rng();
 
@@ -26,6 +28,7 @@ fn main() {
         let options = &[
             "Register a new member",
             "Generate a proof for a member",
+            "Verify proof",
             "Exit",
         ];
         let selection = Select::with_theme(&ColorfulTheme::default())
@@ -37,6 +40,7 @@ fn main() {
 
         match selection {
             0 => {
+                /* Register member */
                 let id = dialoguer::Input::<String>::new()
                     .with_prompt("Enter ID")
                     .allow_empty(false)
@@ -50,50 +54,137 @@ fn main() {
                 members.push(Member::new(id.into(), email.into(), None));
                 println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 
-                let tree = new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &members);
+                let mut leaves = members
+                    .iter()
+                    .map(|member| member.hash::<LeafHash>(&leaf_crh_params))
+                    .collect::<Vec<_>>();
+                let tree =
+                    new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &mut leaves);
+
                 root = Some(tree.root());
 
                 let mut root_serialization = Vec::new();
                 root.serialize(&mut root_serialization).unwrap();
-                println!("root: {}", hex::encode(root_serialization));
+                println!("\x1b[0;33mroot: {}\x1b[0m", hex::encode(root_serialization));
             }
+
             1 => {
+                /* Generate Proof */
                 let id = dialoguer::Input::<String>::new()
                     .with_prompt("Enter ID")
                     .interact_text()
                     .unwrap();
 
                 if let Some(index) = members.iter().position(|member| member.id == id) {
+                    let mut leaves = members
+                        .iter()
+                        .map(|member| member.hash::<LeafHash>(&leaf_crh_params))
+                        .collect::<Vec<_>>();
                     let tree =
-                        new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &members);
+                        new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &mut leaves);
 
                     let root = tree.root();
-                    let proof = tree.generate_proof(index).unwrap();
+                    let path = tree.generate_proof(index).unwrap();
+                    let member = members.get(index).unwrap();
 
                     let circuit = MerkleTreeCircuit {
                         leaf_crh_params: &leaf_crh_params,
                         two_to_one_crh_params: &two_to_one_crh_params,
                         root,
-                        leaf: members.get(index).unwrap(),
-                        authentication_path: Some(proof.clone()),
+                        leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
+                        authentication_path: Some(path),
                     };
-                    let cs = ConstraintSystem::new_ref();
-                    circuit.generate_constraints(cs.clone()).unwrap();
 
-                    assert!(cs.is_satisfied().unwrap());
+                    let (pk, vk) =
+                        Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), &mut rng)
+                            .unwrap();
+                    let proof = Groth16::<Bls12_381>::prove(&pk, circuit, &mut rng).unwrap();
+
+                    let mut leaf_hash_serialization = Vec::new();
+                    member
+                        .hash::<LeafHash>(&leaf_crh_params)
+                        .serialize(&mut leaf_hash_serialization)
+                        .unwrap();
+                    println!(
+                        "\x1b[0;32mLeaf hash: {}\x1b[0m",
+                        hex::encode(&leaf_hash_serialization)
+                    );
 
                     let mut root_serialization = Vec::new();
                     root.serialize(&mut root_serialization).unwrap();
-                    println!("root: {}", hex::encode(root_serialization));
+                    println!(
+                        "\x1b[0;33mRoot: {}\x1b[0m",
+                        hex::encode(&root_serialization)
+                    );
 
-                    let mut compressed_path = Vec::new();
-                    proof.serialize(&mut compressed_path).unwrap();
-                    println!("path: {}", hex::encode(compressed_path));
+                    let mut proof_serialization = Vec::new();
+                    proof.serialize(&mut proof_serialization).unwrap();
+                    println!(
+                        "\x1b[0;33mGenerated proof: {}\x1b[0m",
+                        hex::encode(&proof_serialization)
+                    );
+
+                    let mut vk_serialization = Vec::new();
+                    vk.serialize(&mut vk_serialization).unwrap();
+                    println!(
+                        "\x1b[0;90mVerification key: {}\x1b[0m",
+                        hex::encode(&vk_serialization)
+                    );
+
+                    // Construct public input vector properly
+                    let public_input = vec![root, member.hash::<LeafHash>(&leaf_crh_params)];
+
+                    // Verify the proof with proper error handling
+                    match Groth16::<Bls12_381>::verify(&vk, &public_input, &proof) {
+                        Ok(true) => println!("\x1b[0;32mProof verified successfully!\x1b[0m"),
+                        Ok(false) => println!("\x1b[0;31mProof verification failed\x1b[0m"),
+                        Err(e) => println!("\x1b[0;31mVerification error: {:?}\x1b[0m", e),
+                    }
                 } else {
                     println!("\x1b[0;31mMember not found\x1b[0m");
                 }
             }
-            2 => break,
+
+            2 => {
+                /* Verify proof */
+                let root_hex = dialoguer::Input::<String>::new()
+                    .with_prompt("Enter root (hex encoded)")
+                    .interact_text()
+                    .unwrap();
+                let leaf_hash_hex = dialoguer::Input::<String>::new()
+                    .with_prompt("Enter leaf hash (hex encoded)")
+                    .interact_text()
+                    .unwrap();
+                let proof_hex = dialoguer::Input::<String>::new()
+                    .with_prompt("Enter proof (hex encoded)")
+                    .interact_text()
+                    .unwrap();
+                let vk_hex = dialoguer::Input::<String>::new()
+                    .with_prompt("Enter verification key (hex encoded)")
+                    .interact_text()
+                    .unwrap();
+
+                // Deserialize inputs
+                let root: Root = Root::deserialize(&*hex::decode(root_hex).unwrap()).unwrap();
+                let leaf_hash: Pedersen381Field =
+                    Pedersen381Field::deserialize(&*hex::decode(leaf_hash_hex).unwrap()).unwrap();
+                let public_inputs = vec![root, leaf_hash];
+
+                let proof = Proof::deserialize(&*hex::decode(proof_hex).unwrap()).unwrap();
+
+                let vk =
+                    VerifyingKey::<Bls12_381>::deserialize(&*hex::decode(vk_hex).unwrap()).unwrap();
+
+                // Verify the proof with proper error handling
+                match Groth16::<Bls12_381>::verify(&vk, &public_inputs, &proof) {
+                    Ok(true) => println!("\x1b[0;32mProof verified successfully!\x1b[0m"),
+                    Ok(false) => println!("\x1b[0;31mProof verification failed\x1b[0m"),
+                    Err(e) => println!("\x1b[0;31mVerification error: {:?}\x1b[0m", e),
+                }
+            }
+
+            3 => std::process::exit(0),
+
             _ => unreachable!(),
         }
         println!()
