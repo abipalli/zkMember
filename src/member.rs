@@ -1,4 +1,9 @@
+use ark_crypto_primitives::CRH;
+use ark_ff::{BigInteger, PrimeField};
 use chrono::{DateTime, Utc};
+use serde::ser::SerializeStruct;
+
+use crate::pedersen381::common::LeafHash;
 
 #[derive(Clone)]
 pub struct Member {
@@ -7,64 +12,6 @@ pub struct Member {
     email: String,
     join_date: DateTime<Utc>,
     end_date: Option<DateTime<Utc>>,
-}
-
-impl serde::Serialize for Member {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Member", 4)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("email", &self.email)?;
-        state.serialize_field("join_date", &self.join_date.to_rfc3339())?;
-        state.serialize_field("end_date", &self.end_date.map(|d| d.to_rfc3339()))?;
-        state.end()
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for Member {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(serde::Deserialize)]
-        struct MemberData {
-            id: String,
-            email: String,
-            join_date: String,
-            end_date: Option<String>,
-        }
-
-        let data = MemberData::deserialize(deserializer)?;
-        let join_date = DateTime::parse_from_rfc3339(&data.join_date)
-            .map_err(serde::de::Error::custom)?
-            .with_timezone(&Utc);
-        let end_date = match data.end_date {
-            Some(date) => Some(
-                DateTime::parse_from_rfc3339(&date)
-                    .map_err(serde::de::Error::custom)?
-                    .with_timezone(&Utc),
-            ),
-            _ => None,
-        };
-
-        Ok(Member {
-            id: data.id,
-            email: data.email,
-            join_date,
-            end_date,
-        })
-    }
-}
-
-use ark_std::io::{Result as IoResult, Write};
-use serde::ser::SerializeStruct;
-
-impl ark_ff::bytes::ToBytes for Member {
-    fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
-        Ok((writer.write_all(&self.to_bytes()))?)
-    }
 }
 
 impl Default for Member {
@@ -104,6 +51,61 @@ impl Member {
         }
 
         bytes
+    }
+
+    pub fn hash<H: CRH>(&self, params: &H::Parameters) -> H::Output {
+        H::evaluate(params, &self.to_bytes()).unwrap()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Member {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Member", 4)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("email", &self.email)?;
+        state.serialize_field("join_date", &self.join_date.to_rfc3339())?;
+        state.serialize_field("end_date", &self.end_date.map(|d| d.to_rfc3339()))?;
+        state.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Member {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        struct MemberData {
+            id: String,
+            email: String,
+            join_date: String,
+            end_date: Option<String>,
+        }
+
+        let data = MemberData::deserialize(deserializer)?;
+        let join_date = DateTime::parse_from_rfc3339(&data.join_date)
+            .map_err(serde::de::Error::custom)?
+            .with_timezone(&Utc);
+        let end_date = match data.end_date {
+            Some(date) => Some(
+                DateTime::parse_from_rfc3339(&date)
+                    .map_err(serde::de::Error::custom)?
+                    .with_timezone(&Utc),
+            ),
+            _ => None,
+        };
+
+        Ok(Member {
+            id: data.id,
+            email: data.email,
+            join_date,
+            end_date,
+        })
     }
 }
 

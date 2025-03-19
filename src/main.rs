@@ -3,19 +3,19 @@ use ark_crypto_primitives::CRH;
 use ark_groth16::Groth16;
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_snark::{CircuitSpecificSetupSNARK, SNARK};
+use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
     member::Member,
     pedersen381::{
-        common::{new_membership_tree, ConstraintF, LeafHash, Root, TwoToOneHash},
+        common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
         constraint::MerkleTreeCircuit,
     },
 };
 
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
-    let mut last_circuit: Option<MerkleTreeCircuit>;
+    let mut _last_circuit: Option<MerkleTreeCircuit>;
 
     let mut rng = ark_std::test_rng();
 
@@ -99,7 +99,8 @@ fn main() {
 
                     // Construct public input vector properly
                     let mut public_input = vec![root];
-                    public_input.extend(member.to_bytes().iter().map(|b| ConstraintF::from(*b)));
+                    public_input
+                        .extend(member.to_bytes().iter().map(|b| Pedersen381Field::from(*b)));
 
                     // Verify the proof with proper error handling
                     match Groth16::<Bls12_381>::verify(&vk, &public_input, &proof) {

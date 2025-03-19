@@ -14,7 +14,7 @@ use ark_ed_on_bls12_381::{constraints::EdwardsVar, EdwardsProjective};
 
 /////////////////////////////
 
-pub type ConstraintF = ark_ed_on_bls12_381::Fq;
+pub type Pedersen381Field = ark_ed_on_bls12_381::Fq;
 
 /////////////////////////////
 
@@ -46,6 +46,7 @@ impl pedersen::Window for LeafWindow {
 }
 
 pub type LeafHash = PedersenCRHCompressor<EdwardsProjective, TECompressor, LeafWindow>;
+pub type Leaf = <LeafHash as CRH>::Output;
 
 pub type LeafHashGadget = PedersenCRHCompressorGadget<
     EdwardsProjective,
@@ -57,10 +58,11 @@ pub type LeafHashGadget = PedersenCRHCompressorGadget<
 
 /////////////////////////////
 
-pub type LeafHashParamsVar = <LeafHashGadget as CRHGadget<LeafHash, ConstraintF>>::ParametersVar;
+pub type LeafHashParamsVar =
+    <LeafHashGadget as CRHGadget<LeafHash, Pedersen381Field>>::ParametersVar;
 
 pub type TwoToOneHashParamsVar =
-    <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, ConstraintF>>::ParametersVar;
+    <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, Pedersen381Field>>::ParametersVar;
 
 /////////////////////////////
 
@@ -78,59 +80,96 @@ pub type MembershipTree = MerkleTree<MerkleConfig>;
 pub fn new_membership_tree(
     leaf_crh_params: &<LeafHash as CRH>::Parameters,
     two_to_one_crh_params: &<TwoToOneHash as CRH>::Parameters,
-    members: &Vec<Member>,
+    leaves: &mut Vec<Pedersen381Field>,
 ) -> MembershipTree {
-    MembershipTree::new(
-        leaf_crh_params,
-        two_to_one_crh_params,
-        clean_members_list(members).as_slice(),
-    )
-    .unwrap()
+    clean_membership_list(leaf_crh_params, leaves);
+    MembershipTree::new(leaf_crh_params, two_to_one_crh_params, leaves.as_ref()).unwrap()
 }
 
-fn clean_members_list(members: &Vec<Member>) -> Vec<Member> {
-    let num_members = members.len();
-    let num_empty = if num_members == 1 {
+fn clean_membership_list(
+    leaf_crh_params: &<LeafHash as CRH>::Parameters,
+    leaves: &mut Vec<Pedersen381Field>,
+) {
+    let leaf_crh_params: &<LeafHash as CRH>::Parameters = &leaf_crh_params;
+    let num_members = leaves.len();
+
+    let num_needed = if num_members == 1 {
         1
     } else {
         num_members.next_power_of_two() - num_members
     };
 
-    let mut cleaned_members_list = members.clone();
-    cleaned_members_list.append(&mut vec![Member::default(); num_empty]);
-
-    cleaned_members_list
+    leaves.append(&mut vec![
+        <LeafHash as CRH>::evaluate(
+            leaf_crh_params,
+            Member::default().to_bytes().as_slice(),
+        )
+        .unwrap();
+        num_needed
+    ]);
 }
 
 #[cfg(test)]
 mod membership_tree_tests {
-    use super::clean_members_list as new_membership_tree;
     use crate::{
         member::Member,
-        pedersen381::common::{LeafHash, MembershipTree, MerkleConfig, MerklePath, TwoToOneHash},
+        pedersen381::common::{
+            clean_membership_list, new_membership_tree, LeafHash, MerkleConfig, MerklePath,
+            TwoToOneHash,
+        },
     };
-    use ark_crypto_primitives::MerkleTree;
+    use ark_crypto_primitives::{MerkleTree, CRH};
 
-    #[test]
-    fn one() {
-        let cleaned_list = new_membership_tree(&vec![Member::default()]);
-        assert!(cleaned_list.len().next_power_of_two() == 2)
+    fn setup() -> (
+        <LeafHash as CRH>::Parameters,
+        <TwoToOneHash as CRH>::Parameters,
+    ) {
+        let mut rng = ark_std::test_rng();
+        let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
+        let two_to_one_crh_params = <TwoToOneHash as CRH>::setup(&mut rng).unwrap();
+        (leaf_crh_params, two_to_one_crh_params)
     }
 
     #[test]
-    fn two() {
-        let cleaned_list = new_membership_tree(&vec![Member::default(), Member::default()]);
-        assert!(cleaned_list.len().next_power_of_two() == 2)
+    fn one_leaf() {
+        let params = setup().0;
+
+        let members = &vec![Member::default()];
+        let mut leaves = members
+            .iter()
+            .map(|member| <LeafHash as CRH>::evaluate(&params, &member.to_bytes()).unwrap())
+            .collect::<Vec<_>>();
+
+        clean_membership_list(&params, &mut leaves);
+        assert!(leaves.len().next_power_of_two() == 2)
     }
 
     #[test]
-    fn three() {
-        let cleaned_list = new_membership_tree(&vec![
-            Member::default(),
-            Member::default(),
-            Member::default(),
-        ]);
-        assert!(cleaned_list.len() == 4)
+    fn two_leaves() {
+        let params = setup().0;
+
+        let members = vec![Member::default(), Member::default()];
+        let mut leaves = members
+            .iter()
+            .map(|member| <LeafHash as CRH>::evaluate(&params, &member.to_bytes()).unwrap())
+            .collect::<Vec<_>>();
+
+        clean_membership_list(&params, &mut leaves);
+        assert_eq!(leaves.len(), 2); // Already a power of two, no additional elements should be added
+    }
+
+    #[test]
+    fn three_leaves() {
+        let params = setup().0;
+
+        let members = vec![Member::default(), Member::default(), Member::default()];
+        let mut leaves = members
+            .iter()
+            .map(|member| <LeafHash as CRH>::evaluate(&params, &member.to_bytes()).unwrap())
+            .collect::<Vec<_>>();
+
+        clean_membership_list(&params, &mut leaves);
+        assert_eq!(leaves.len(), 4); // Should add 1 more element to make it a power of two
     }
 
     #[test]
@@ -139,20 +178,24 @@ mod membership_tree_tests {
 
         let mut rng = ark_std::test_rng();
 
-        let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
-        let two_to_one_crh_params = <TwoToOneHash as CRH>::setup(&mut rng).unwrap();
+        let (leaf_crh_params, two_to_one_crh_params) = setup();
 
         let members = [
             Member::new("1".into(), "1@usc.edu".into(), None),
             Member::new("2".into(), "2@usc.edu".into(), None),
         ];
+        let leaves = members.clone().map(|member| {
+            <LeafHash as CRH>::evaluate(&leaf_crh_params, &member.to_bytes()).unwrap()
+        });
 
-        let tree: MerkleTree<MerkleConfig> =
-            MembershipTree::new::<Member>(&leaf_crh_params, &two_to_one_crh_params, &members)
-                .unwrap();
+        let tree: MerkleTree<MerkleConfig> = new_membership_tree(
+            &leaf_crh_params,
+            &two_to_one_crh_params,
+            &mut leaves.to_vec(),
+        );
 
-        let path: MerklePath = tree.generate_proof(1).unwrap();
         let root = tree.root();
+        let path: MerklePath = tree.generate_proof(1).unwrap();
 
         // Next, let's verify the proof!
         let result = path
@@ -160,7 +203,7 @@ mod membership_tree_tests {
                 &leaf_crh_params,
                 &two_to_one_crh_params,
                 &root,
-                &members[1], // The claimed leaf
+                &<LeafHash as CRH>::evaluate(&leaf_crh_params, &members[1].to_bytes()).unwrap(), // The claimed leaf
             )
             .unwrap();
 

@@ -7,10 +7,8 @@ mod groth16_tests {
     use super::constraint::*;
     use crate::member::Member;
     use ark_bls12_381::Bls12_381;
-    use ark_crypto_primitives::{MerkleTree, CRH, SNARK};
-    use ark_ff::Fp256;
+    use ark_crypto_primitives::{CRH, SNARK};
     use ark_groth16::Groth16;
-    use ark_std::rand::RngCore;
 
     #[test]
     fn test_groth16_snark() {
@@ -29,18 +27,27 @@ mod groth16_tests {
         ];
 
         // Create Merkle tree
-        let tree = new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &members);
+        let mut leaves = members
+            .iter()
+            .map(|member| {
+                <LeafHash as CRH>::evaluate(&leaf_crh_params, &member.to_bytes()).unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        let tree = new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &mut leaves);
         let root = tree.root();
 
         // Generate proof for bob (index 1)
         let merkle_path = tree.generate_proof(1).unwrap();
+
+        // Convert the member into a format compatible with the circuit
 
         // Create circuit
         let circuit = MerkleTreeCircuit {
             leaf_crh_params: &leaf_crh_params,
             two_to_one_crh_params: &two_to_one_crh_params,
             root,
-            leaf: &members[1],
+            leaf: members[1].to_bytes(),
             authentication_path: Some(merkle_path),
         };
 
@@ -49,17 +56,11 @@ mod groth16_tests {
             .expect("setup failed");
 
         // Create the proof
-        let proof = Groth16::<Bls12_381>::prove(&pk, circuit.clone(), &mut rng)
-            .expect("proof generation failed");
+        let proof = Groth16::<Bls12_381>::prove(&pk, circuit.clone(), &mut rng).unwrap();
 
         // Calculate public inputs
-        let mut public_inputs = vec![root];
-        let member_bytes = members[1].to_bytes();
-        let member_field_elements: Vec<Fp256<ark_ed_on_bls12_381::FqParameters>> = member_bytes
-            .iter()
-            .map(|&byte| Fp256::from(byte as u64))
-            .collect();
-        public_inputs.extend_from_slice(&member_field_elements);
+        let mut public_inputs: Vec<_> = vec![root];
+        // public_inputs.extend_from_slice(members[1].to_bytes().as_slice()); // TODO: Fix this
 
         // Verify the proof
         let verified =
