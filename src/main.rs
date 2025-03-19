@@ -40,6 +40,7 @@ fn main() {
 
         match selection {
             0 => {
+                /* Register member */
                 let id = dialoguer::Input::<String>::new()
                     .with_prompt("Enter ID")
                     .allow_empty(false)
@@ -68,6 +69,7 @@ fn main() {
             }
 
             1 => {
+                /* Generate Proof */
                 let id = dialoguer::Input::<String>::new()
                     .with_prompt("Enter ID")
                     .interact_text()
@@ -93,7 +95,6 @@ fn main() {
                         authentication_path: Some(path),
                     };
 
-                    // let (pk, vk) = Groth16::<Bls12_381>::setup(circuit.clone(), &mut rng).unwrap();
                     let (pk, vk) =
                         Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), &mut rng)
                             .unwrap();
@@ -145,6 +146,7 @@ fn main() {
             }
 
             2 => {
+                /* Verify proof */
                 let root_hex = dialoguer::Input::<String>::new()
                     .with_prompt("Enter root (hex encoded)")
                     .interact_text()
