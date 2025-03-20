@@ -1,4 +1,3 @@
-use ark_bls12_381::Bls12_381;
 use ark_crypto_primitives::CRH;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
