@@ -5,13 +5,12 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
-    member::Member,
+    member::{generate_members, Member},
     pedersen381::{
         common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
         constraint::MerkleTreeCircuit,
     },
 };
-
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
     let mut _last_circuit: Option<MerkleTreeCircuit>;
@@ -23,6 +22,7 @@ fn main() {
 
     // public store
     let mut root: Option<Root>;
+    generate_members(&mut members, 10);
 
     loop {
         let options = &[
@@ -51,7 +51,8 @@ fn main() {
                     .allow_empty(false)
                     .interact_text()
                     .unwrap();
-                members.push(Member::new(id.into(), email.into(), None));
+                // members.push(Member::new(id.into(), email.into(), None));
+                members.push(Member::with_padding(id.into(), email.into(), None, 10)); // testing member with padding
                 println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 
                 let mut leaves = members
@@ -65,7 +66,7 @@ fn main() {
 
                 let mut root_serialization = Vec::new();
                 root.serialize(&mut root_serialization).unwrap();
-                println!("\x1b[0;33mroot: {}\x1b[0m", hex::encode(root_serialization));
+                println!("\x1b[0;33mFoot: {}\x1b[0m", hex::encode(root_serialization));
             }
 
             1 => {
