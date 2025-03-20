@@ -5,11 +5,11 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::{
-    member::{generate_members, Member},
-    pedersen381::{
+    commitments::pedersen381::{
         common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
         constraint::MerkleTreeCircuit,
     },
+    member::{generate_members, Member},
 };
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
@@ -25,16 +25,17 @@ fn main() {
     generate_members(&mut members, 10);
 
     loop {
-        let options = &[
+        let options = [
             "Register a new member",
             "Generate a proof for a member",
             "Verify proof",
             "Exit",
         ];
+
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Choose an option")
             .default(0)
-            .items(&options[..])
+            .items(&options)
             .interact()
             .unwrap();
 
@@ -66,7 +67,7 @@ fn main() {
 
                 let mut root_serialization = Vec::new();
                 root.serialize(&mut root_serialization).unwrap();
-                println!("\x1b[0;33mFoot: {}\x1b[0m", hex::encode(root_serialization));
+                println!("\x1b[0;33mRoot: {}\x1b[0m", hex::encode(root_serialization));
             }
 
             1 => {
@@ -114,7 +115,7 @@ fn main() {
                     let mut root_serialization = Vec::new();
                     root.serialize(&mut root_serialization).unwrap();
                     println!(
-                        "\x1b[0;33mRoot: {}\x1b[0m",
+                        "\x1b[0;34mRoot: {}\x1b[0m",
                         hex::encode(&root_serialization)
                     );
 

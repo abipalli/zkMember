@@ -154,9 +154,9 @@ impl<'de> serde::Deserialize<'de> for Member {
 }
 
 pub fn generate_members(members: &mut Box<Vec<Member>>, amount: u32) {
-    for i in 0..amount {
-        let id = i.to_string();
-        let email = id.clone();
+    for i in 1..amount + 1 {
+        let id = format!("{}", i);
+        let email = format!("{}@usc.edu", i);
         members.push(Member::new(id, email, None));
     }
     println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
