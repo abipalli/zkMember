@@ -4,13 +4,35 @@ use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
-use zkmember::{
-    member::Member,
-    pedersen381::{
-        common::{new_membership_tree, LeafHash, Pedersen381Field, Root, TwoToOneHash},
-        constraint::MerkleTreeCircuit,
+use zkmember::member::Member;
+
+// Conditional imports for pedersen modules
+#[cfg(feature = "pedersen761")]
+use zkmember::pedersen761::{
+    common::{
+        new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
     },
+    constraint::MerkleTreeCircuit,
 };
+
+#[cfg(feature = "pedersen381")]
+use zkmember::pedersen381::{
+    common::{
+        new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
+    },
+    constraint::MerkleTreeCircuit,
+};
+
+// Conditional curve import/alias
+#[cfg(feature = "pedersen761")]
+use ark_bw6_761::BW6_761;
+#[cfg(feature = "pedersen761")]
+type Curve = BW6_761;
+
+#[cfg(feature = "pedersen381")]
+use ark_bls12_381::Bls12_381;
+#[cfg(feature = "pedersen381")]
+type Curve = Bls12_381;
 
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
@@ -96,9 +118,9 @@ fn main() {
                     };
 
                     let (pk, vk) =
-                        Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), &mut rng)
+                        Groth16::<Curve>::circuit_specific_setup(circuit.clone(), &mut rng)
                             .unwrap();
-                    let proof = Groth16::<Bls12_381>::prove(&pk, circuit, &mut rng).unwrap();
+                    let proof = Groth16::<Curve>::prove(&pk, circuit, &mut rng).unwrap();
 
                     let mut leaf_hash_serialization = Vec::new();
                     member
@@ -135,7 +157,7 @@ fn main() {
                     let public_input = vec![root, member.hash::<LeafHash>(&leaf_crh_params)];
 
                     // Verify the proof with proper error handling
-                    match Groth16::<Bls12_381>::verify(&vk, &public_input, &proof) {
+                    match Groth16::<Curve>::verify(&vk, &public_input, &proof) {
                         Ok(true) => println!("\x1b[0;32mProof verified successfully!\x1b[0m"),
                         Ok(false) => println!("\x1b[0;31mProof verification failed\x1b[0m"),
                         Err(e) => println!("\x1b[0;31mVerification error: {:?}\x1b[0m", e),
@@ -166,17 +188,17 @@ fn main() {
 
                 // Deserialize inputs
                 let root: Root = Root::deserialize(&*hex::decode(root_hex).unwrap()).unwrap();
-                let leaf_hash: Pedersen381Field =
-                    Pedersen381Field::deserialize(&*hex::decode(leaf_hash_hex).unwrap()).unwrap();
+                let leaf_hash: PedersenField =
+                    PedersenField::deserialize(&*hex::decode(leaf_hash_hex).unwrap()).unwrap();
                 let public_inputs = vec![root, leaf_hash];
 
                 let proof = Proof::deserialize(&*hex::decode(proof_hex).unwrap()).unwrap();
 
                 let vk =
-                    VerifyingKey::<Bls12_381>::deserialize(&*hex::decode(vk_hex).unwrap()).unwrap();
+                    VerifyingKey::<Curve>::deserialize(&*hex::decode(vk_hex).unwrap()).unwrap();
 
                 // Verify the proof with proper error handling
-                match Groth16::<Bls12_381>::verify(&vk, &public_inputs, &proof) {
+                match Groth16::<Curve>::verify(&vk, &public_inputs, &proof) {
                     Ok(true) => println!("\x1b[0;32mProof verified successfully!\x1b[0m"),
                     Ok(false) => println!("\x1b[0;31mProof verification failed\x1b[0m"),
                     Err(e) => println!("\x1b[0;31mVerification error: {:?}\x1b[0m", e),

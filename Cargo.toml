@@ -27,6 +27,8 @@ ark-ed-on-bls12-381 = { version = "^0.3.0", features = ["r1cs"] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [
 	"curve",
 ] }
+ark-ed-on-bw6-761 = { version = "^0.3.0", features = ["r1cs"] }
+ark-bw6-761 = { version = "^0.3.0" }
 
 
 tracing = { version = "0.1", default-features = false, features = [
@@ -42,10 +44,11 @@ hex = "0.4.3"
 serde_json = { version = "1.0.140", optional = true }
 
 [features]
-default = ["serde"]
+default = ["serde", "pedersen761"]
 serde = ["serde_json", "derive"]
 derive = ["serde_json"]
-
+pedersen761 = []
+pedersen381 = []
 
 [[bin]]
 name = "zkmember"
