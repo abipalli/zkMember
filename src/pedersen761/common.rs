@@ -22,7 +22,7 @@ pub type Pedersen761Field = ark_ed_on_bw6_761::Fq;
 pub struct TwoToOneWindow;
 impl pedersen::Window for TwoToOneWindow {
     const WINDOW_SIZE: usize = 4;
-    const NUM_WINDOWS: usize = 128;
+    const NUM_WINDOWS: usize = 192;
 }
 
 pub type TwoToOneHash = PedersenCRHCompressor<EdwardsProjective, TECompressor, TwoToOneWindow>;
@@ -42,7 +42,8 @@ pub type TwoToOneHashGadget = PedersenCRHCompressorGadget<
 pub struct LeafWindow;
 impl pedersen::Window for LeafWindow {
     const WINDOW_SIZE: usize = 4;
-    const NUM_WINDOWS: usize = 144;
+    // Increased from 144 to 256 to accommodate 768 bits (96 bytes) of input
+    const NUM_WINDOWS: usize = 192;
 }
 
 pub type LeafHash = PedersenCRHCompressor<EdwardsProjective, TECompressor, LeafWindow>;
