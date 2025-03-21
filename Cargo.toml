@@ -45,10 +45,9 @@ serde_json = { version = "1.0.140", optional = true }
 
 [features]
 default = ["serde", "pedersen761"]
-serde = ["serde_json", "derive"]
-derive = ["serde_json"]
-pedersen761 = []
+serde = ["serde_json"]
 pedersen381 = []
+pedersen761 = []
 
 [[bin]]
 name = "zkmember"
