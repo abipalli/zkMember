@@ -1,6 +1,5 @@
+pub mod commitments;
 pub mod member;
-pub mod pedersen381;
-pub mod pedersen761;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CurveType {

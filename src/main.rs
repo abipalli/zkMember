@@ -9,7 +9,7 @@ use zkmember::member::Member;
 #[cfg(feature = "pedersen381")]
 mod pedersen381 {
     pub use ark_bls12_381::Bls12_381;
-    pub use zkmember::pedersen381::{
+    pub use zkmember::commitments::pedersen381::{
         common::{
             new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
         },
@@ -24,7 +24,7 @@ use pedersen381::*;
 #[cfg(feature = "pedersen761")]
 mod pedersen761 {
     pub use ark_bw6_761::BW6_761;
-    pub use zkmember::pedersen761::{
+    pub use zkmember::commitments::pedersen761::{
         common::{
             new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
         },
