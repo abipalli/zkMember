@@ -78,11 +78,11 @@ mod tests {
     use ark_relations::r1cs::ConstraintSynthesizer;
 
     use crate::{
-        member::Member,
-        pedersen381::{
+        commitments::pedersen381::{
             common::{LeafHash, MembershipTree, MerkleConfig, MerklePath, TwoToOneHash},
             constraint::MerkleTreeCircuit,
         },
+        member::Member,
     };
 
     #[test]
