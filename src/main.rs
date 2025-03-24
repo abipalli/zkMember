@@ -6,32 +6,34 @@ use dialoguer::{theme::ColorfulTheme, Select};
 use zkmember::member::Member;
 
 // Conditional imports for pedersen modules
-#[cfg(feature = "pedersen761")]
-use zkmember::pedersen761::{
-    common::{
-        new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
-    },
-    constraint::MerkleTreeCircuit,
-};
-
 #[cfg(feature = "pedersen381")]
-use zkmember::pedersen381::{
-    common::{
-        new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
-    },
-    constraint::MerkleTreeCircuit,
-};
+mod pedersen381 {
+    pub use ark_bls12_381::Bls12_381;
+    pub use zkmember::pedersen381::{
+        common::{
+            new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
+        },
+        constraint::MerkleTreeCircuit,
+    };
+    pub type Curve = Bls12_381;
+}
+#[cfg(feature = "pedersen381")]
+use pedersen381::*;
 
 // Conditional curve import/alias
 #[cfg(feature = "pedersen761")]
-use ark_bw6_761::BW6_761;
+mod pedersen761 {
+    pub use ark_bw6_761::BW6_761;
+    pub use zkmember::pedersen761::{
+        common::{
+            new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
+        },
+        constraint::MerkleTreeCircuit,
+    };
+    pub type Curve = BW6_761;
+}
 #[cfg(feature = "pedersen761")]
-type Curve = BW6_761;
-
-#[cfg(feature = "pedersen381")]
-use ark_bls12_381::Bls12_381;
-#[cfg(feature = "pedersen381")]
-type Curve = Bls12_381;
+use pedersen761::*;
 
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
