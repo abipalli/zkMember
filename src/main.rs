@@ -6,7 +6,7 @@ use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
 use rand::Rng;
 use zkmember::commitments::MerkleTreeCircuit as CommonMerkleTreeCircuit;
-use zkmember::member::Member;
+use zkmember::member::{generate_members, Member};
 
 // Conditional imports for pedersen modules
 #[cfg(feature = "pedersen381")]
@@ -48,18 +48,20 @@ fn main() {
 
     // public store
     let mut root: Option<Root>;
+    generate_members(&mut members, 10);
 
     loop {
-        let options = &[
+        let options = [
             "Register a new member",
             "Generate a proof for a member",
             "Verify proof",
             "Exit",
         ];
+
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Choose an option")
             .default(0)
-            .items(&options[..])
+            .items(&options)
             .interact()
             .unwrap();
 
@@ -76,7 +78,8 @@ fn main() {
                     .allow_empty(false)
                     .interact_text()
                     .unwrap();
-                members.push(Member::new(id.into(), email.into(), None));
+                // members.push(Member::new(id.into(), email.into(), None));
+                members.push(Member::with_padding(id.into(), email.into(), None, 10)); // testing member with padding
                 println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 
                 let mut leaves = members
@@ -90,7 +93,7 @@ fn main() {
 
                 let mut root_serialization = Vec::new();
                 root.serialize(&mut root_serialization).unwrap();
-                println!("\x1b[0;33mroot: {}\x1b[0m", hex::encode(root_serialization));
+                println!("\x1b[0;33mRoot: {}\x1b[0m", hex::encode(root_serialization));
             }
 
             1 => {
@@ -152,7 +155,7 @@ fn main() {
                     let mut root_serialization = Vec::new();
                     root.serialize(&mut root_serialization).unwrap();
                     println!(
-                        "\x1b[0;33mRoot: {}\x1b[0m",
+                        "\x1b[0;34mRoot: {}\x1b[0m",
                         hex::encode(&root_serialization)
                     );
 
