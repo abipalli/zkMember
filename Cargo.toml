@@ -57,3 +57,8 @@ path = "src/main.rs"
 
 [dev-dependencies]
 criterion = "0.5.1"
+
+[[bench]]
+name = "pedersen"
+harness = false
+path = "benches/pedersen.rs"
