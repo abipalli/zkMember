@@ -2,6 +2,7 @@ use super::common::{
     LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen761Field, Root,
     TwoToOneHash, TwoToOneHashGadget, TwoToOneHashParamsVar,
 };
+use crate::commitments::MerkleTreeCircuit as CommonMerkleTreeCircuit;
 use ark_crypto_primitives::{
     crh::{CRHGadget, TwoToOneCRH, TwoToOneCRHGadget},
     PathVar, CRH,
@@ -71,6 +72,46 @@ impl<'a> ConstraintSynthesizer<Pedersen761Field> for MerkleTreeCircuit<'a> {
         Ok(())
     }
 }
+
+// impl<'a> ConstraintSynthesizer<Pedersen761Field>
+//     for CommonMerkleTreeCircuit<'a, LeafHash, TwoToOneHash, Root, Pedersen761Field, MerkleConfig>
+// {
+//     fn generate_constraints(
+//         self,
+//         cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen761Field>,
+//     ) -> ark_relations::r1cs::Result<()> {
+//         // Allocate parameters as constants
+//         let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), self.leaf_crh_params)?;
+//         let two_to_one_crh_params =
+//             TwoToOneHashParamsVar::new_constant(cs.clone(), self.two_to_one_crh_params)?;
+
+//         // Allocate public inputs
+//         let root =
+//             PedersenRootVar::new_input(ark_relations::ns!(cs, "root_var"), || Ok(&self.root))?;
+
+//         let hashed_leaf: PedersenLeafVar =
+//             PedersenLeafVar::new_input(ark_relations::ns!(cs, "leaf_var"), || Ok(&self.leaf_hash))?;
+
+//         // Allocate path as witness
+//         let path: PedersenPathVar =
+//             PedersenPathVar::new_witness(ark_relations::ns!(cs, "path_witness"), || {
+//                 self.authentication_path
+//                     .as_ref()
+//                     .ok_or(SynthesisError::AssignmentMissing)
+//             })?;
+
+//         let is_member: Boolean<Pedersen761Field> = path.verify_membership(
+//             &leaf_crh_params,
+//             &two_to_one_crh_params,
+//             &root,
+//             &hashed_leaf,
+//         )?;
+
+//         is_member.enforce_equal(&Boolean::TRUE)?;
+
+//         Ok(())
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,7 @@
-pub mod common;
-pub mod constraint;
+pub mod common; // TODO: module should be private
+pub use common::*;
+pub mod constraint; // TODO: module should be private
+pub use constraint::*;
 
 #[cfg(test)]
 mod groth16_tests {

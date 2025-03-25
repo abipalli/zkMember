@@ -1,8 +1,11 @@
-use ark_crypto_primitives::CRH;
+use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
+use ark_relations::r1cs::ConstraintSynthesizer;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
+use rand::Rng;
+use zkmember::commitments::MerkleTreeCircuit as CommonMerkleTreeCircuit;
 use zkmember::member::Member;
 
 // Conditional imports for pedersen modules
@@ -13,7 +16,7 @@ mod pedersen381 {
         common::{
             new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
         },
-        constraint::MerkleTreeCircuit,
+        MerkleConfig, MerkleTreeCircuit,
     };
     pub type Curve = Bls12_381;
 }
@@ -28,7 +31,7 @@ mod pedersen761 {
         common::{
             new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
         },
-        constraint::MerkleTreeCircuit,
+        MerkleConfig, MerkleTreeCircuit,
     };
     pub type Curve = BW6_761;
 }
@@ -37,12 +40,11 @@ use pedersen761::*;
 
 fn main() {
     let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
-    let mut _last_circuit: Option<MerkleTreeCircuit>;
 
     let mut rng = ark_std::test_rng();
 
     let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
-    let two_to_one_crh_params = <TwoToOneHash as CRH>::setup(&mut rng).unwrap();
+    let two_to_one_crh_params = <TwoToOneHash as TwoToOneCRH>::setup(&mut rng).unwrap();
 
     // public store
     let mut root: Option<Root>;
@@ -118,6 +120,20 @@ fn main() {
                         authentication_path: Some(path),
                     };
 
+                    // let circuit = CommonMerkleTreeCircuit::<
+                    //     PedersenField,
+                    //     LeafHash,
+                    //     Root,
+                    //     TwoToOneHash,
+                    //     MerkleConfig,
+                    // > {
+                    //     leaf_crh_params: &leaf_crh_params.clone(),
+                    //     two_to_one_crh_params: &two_to_one_crh_params.clone(),
+                    //     root,
+                    //     leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
+                    //     authentication_path: Some(path),
+                    // };
+
                     let (pk, vk) =
                         Groth16::<Curve>::circuit_specific_setup(circuit.clone(), &mut rng)
                             .unwrap();
@@ -189,7 +205,7 @@ fn main() {
 
                 // Deserialize inputs
                 let root: Root = Root::deserialize(&*hex::decode(root_hex).unwrap()).unwrap();
-                let leaf_hash: PedersenField =
+                let leaf_hash =
                     PedersenField::deserialize(&*hex::decode(leaf_hash_hex).unwrap()).unwrap();
                 let public_inputs = vec![root, leaf_hash];
 
