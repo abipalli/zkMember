@@ -1,11 +1,8 @@
+use std::time::Duration;
+
 use ark_crypto_primitives::SNARK;
 use ark_crypto_primitives::{crh::TwoToOneCRH, CRH};
 use ark_groth16::Groth16;
-use ark_marlin::Marlin;
-use ark_poly::univariate::DensePolynomial;
-use ark_poly_commit::marlin_pc::MarlinKZG10;
-use ark_serialize::CanonicalSerialize;
-use blake2::Blake2s;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
@@ -20,7 +17,6 @@ mod pedersen381 {
     pub use zkmember::commitments::pedersen381::{
         common::{
             new_membership_tree as new_membership381_tree, LeafHash as LeafHash381,
-            MerkleConfig as Merkle381Config, Pedersen381Field, Root as Root381,
             TwoToOneHash as TwoToOneHash381,
         },
         constraint::MerkleTreeCircuit as MerkleTreeCircuit381,
@@ -91,7 +87,6 @@ mod pedersen761 {
     pub use zkmember::commitments::pedersen761::{
         common::{
             new_membership_tree as new_membership761_tree, LeafHash as LeafHash761,
-            MerkleConfig as Merkle761Config, Pedersen761Field, Root as Root761,
             TwoToOneHash as TwoToOneHash761,
         },
         constraint::MerkleTreeCircuit as MerkleTreeCircuit761,
@@ -151,6 +146,20 @@ mod pedersen761 {
     }
 }
 
-criterion_group!(pedersen381_benches, pedersen381::bench_groth16);
-criterion_group!(pedersen761_benches, pedersen761::bench_groth16);
+fn criterion_config(measurement_secs: u64) -> Criterion {
+    Criterion::default()
+        .measurement_time(Duration::from_secs(measurement_secs))
+        .sample_size(10)
+}
+
+criterion_group! {
+    name = pedersen381_benches;
+    config = criterion_config(10);
+    targets = pedersen381::bench_groth16
+}
+criterion_group! {
+    name = pedersen761_benches;
+    config = criterion_config(10);
+    targets = pedersen761::bench_groth16
+}
 criterion_main!(pedersen381_benches, pedersen761_benches);
