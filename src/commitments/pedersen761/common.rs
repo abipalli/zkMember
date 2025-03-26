@@ -113,11 +113,11 @@ fn clean_membership_list(
 #[cfg(test)]
 mod membership_tree_tests {
     use crate::{
-        member::Member,
-        pedersen761::common::{
+        commitments::pedersen761::common::{
             clean_membership_list, new_membership_tree, LeafHash, MerkleConfig, MerklePath,
             TwoToOneHash,
         },
+        member::Member,
     };
     use ark_crypto_primitives::{MerkleTree, CRH};
 

@@ -9,6 +9,15 @@ pub struct Member {
     email: String,
     join_date: DateTime<Utc>,
     end_date: Option<DateTime<Utc>>,
+    padding: Option<Vec<u8>>,
+}
+
+use ark_std::io::{Result as IoResult, Write};
+
+impl ark_ff::bytes::ToBytes for Member {
+    fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
+        Ok((writer.write_all(&self.to_bytes()))?)
+    }
 }
 
 impl Default for Member {
@@ -18,18 +27,36 @@ impl Default for Member {
             email: "example@usc.edu".to_string(),
             join_date: chrono::offset::Utc::now(),
             end_date: None,
+            padding: None,
         }
     }
 }
 
 impl Member {
     /// Create a new member
+
     pub fn new(id: String, email: String, end_date: Option<DateTime<Utc>>) -> Self {
         Self {
             id,
             email,
             join_date: chrono::offset::Utc::now(),
             end_date,
+            padding: None,
+        }
+    }
+
+    pub fn with_padding(
+        id: String,
+        email: String,
+        end_date: Option<DateTime<Utc>>,
+        pad: usize,
+    ) -> Self {
+        Self {
+            id,
+            email,
+            join_date: chrono::offset::Utc::now(),
+            end_date,
+            padding: Some(vec![0; pad]),
         }
     }
 
@@ -43,6 +70,13 @@ impl Member {
         if let Some(end_date) = self.end_date {
             bytes.extend_from_slice(&[1_u8]);
             bytes.extend_from_slice(&end_date.timestamp().to_be_bytes());
+        } else {
+            bytes.extend_from_slice(&[0_u8]);
+        }
+
+        if let Some(padding) = &self.padding {
+            bytes.extend_from_slice(&[1_u8]);
+            bytes.extend_from_slice(&padding); // does this work???
         } else {
             bytes.extend_from_slice(&[0_u8]);
         }
@@ -66,6 +100,10 @@ impl serde::Serialize for Member {
         state.serialize_field("email", &self.email)?;
         state.serialize_field("join_date", &self.join_date.to_rfc3339())?;
         state.serialize_field("end_date", &self.end_date.map(|d| d.to_rfc3339()))?;
+        state.serialize_field(
+            "padding",
+            &"0".repeat(self.padding.as_ref().map_or(0, |vec| vec.len())),
+        )?;
         state.end()
     }
 }
@@ -82,6 +120,7 @@ impl<'de> serde::Deserialize<'de> for Member {
             email: String,
             join_date: String,
             end_date: Option<String>,
+            padding: Option<String>,
         }
 
         let data = MemberData::deserialize(deserializer)?;
@@ -97,13 +136,30 @@ impl<'de> serde::Deserialize<'de> for Member {
             _ => None,
         };
 
+        let padding = match data.padding {
+            Some(pad) => Some(
+                vec![0; pad.len()], // why does Vec<u8>! not work
+            ),
+            _ => None,
+        }; // padding deserialized
+
         Ok(Member {
             id: data.id,
             email: data.email,
             join_date,
             end_date,
+            padding,
         })
     }
+}
+
+pub fn generate_members(members: &mut Box<Vec<Member>>, amount: u32) {
+    for i in 1..amount + 1 {
+        let id = format!("{}", i);
+        let email = format!("{}@usc.edu", i);
+        members.push(Member::new(id, email, None));
+    }
+    println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 }
 
 #[cfg(test)]

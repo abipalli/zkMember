@@ -42,13 +42,27 @@ serde = { version = "1.0.218", features = ["derive"] }
 dialoguer = "0.11.0"
 hex = "0.4.3"
 serde_json = { version = "1.0.140", optional = true }
+rand = "0.9.0"
+ark-bls12-377 = { version = "0.5.0", features = ["r1cs"] }
+ark-poly-commit = { version = "0.5.0", features = ["ark-r1cs-std", "r1cs"] }
+ark-poly = "0.5.0"
+blake2 = { version = "0.9", default-features = false }
 
 [features]
-default = ["serde", "pedersen761"]
+default = ["serde", "pedersen381"]
 serde = ["serde_json"]
 pedersen381 = []
 pedersen761 = []
+benchmark = ["pedersen381", "pedersen761"]
 
 [[bin]]
 name = "zkmember"
 path = "src/main.rs"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "pedersen"
+harness = false
+path = "benches/pedersen.rs"

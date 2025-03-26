@@ -1,5 +1,5 @@
 use super::common::{
-    LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen381Field, Root,
+    LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen761Field, Root,
     TwoToOneHash, TwoToOneHashGadget, TwoToOneHashParamsVar,
 };
 use ark_crypto_primitives::{
@@ -12,13 +12,13 @@ use ark_relations::r1cs::{ConstraintSynthesizer, SynthesisError};
 
 /// R1CS representation of the Merkle tree root.
 pub type PedersenRootVar =
-    <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, Pedersen381Field>>::OutputVar;
+    <TwoToOneHashGadget as TwoToOneCRHGadget<TwoToOneHash, Pedersen761Field>>::OutputVar;
 
-pub type PedersenLeafVar = <LeafHashGadget as CRHGadget<LeafHash, Pedersen381Field>>::OutputVar;
+pub type PedersenLeafVar = <LeafHashGadget as CRHGadget<LeafHash, Pedersen761Field>>::OutputVar;
 
 /// R1CS representation of the Merkle tree path.
 pub type PedersenPathVar =
-    PathVar<MerkleConfig, LeafHashGadget, TwoToOneHashGadget, Pedersen381Field>;
+    PathVar<MerkleConfig, LeafHashGadget, TwoToOneHashGadget, Pedersen761Field>;
 
 #[derive(Clone)]
 pub struct MerkleTreeCircuit<'a> {
@@ -28,16 +28,16 @@ pub struct MerkleTreeCircuit<'a> {
 
     // These are the public inputs to the circuit
     pub root: Root,
-    pub leaf_hash: Pedersen381Field,
+    pub leaf_hash: Pedersen761Field,
 
     // This is the private witness to the circuit
     pub authentication_path: Option<MerklePath>,
 }
 
-impl<'a> ConstraintSynthesizer<Pedersen381Field> for MerkleTreeCircuit<'a> {
+impl<'a> ConstraintSynthesizer<Pedersen761Field> for MerkleTreeCircuit<'a> {
     fn generate_constraints(
         self,
-        cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen381Field>,
+        cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen761Field>,
     ) -> ark_relations::r1cs::Result<()> {
         // Allocate parameters as constants
         let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), self.leaf_crh_params)?;
@@ -59,7 +59,7 @@ impl<'a> ConstraintSynthesizer<Pedersen381Field> for MerkleTreeCircuit<'a> {
                     .ok_or(SynthesisError::AssignmentMissing)
             })?;
 
-        let is_member: Boolean<Pedersen381Field> = path.verify_membership(
+        let is_member: Boolean<Pedersen761Field> = path.verify_membership(
             &leaf_crh_params,
             &two_to_one_crh_params,
             &root,
@@ -72,17 +72,57 @@ impl<'a> ConstraintSynthesizer<Pedersen381Field> for MerkleTreeCircuit<'a> {
     }
 }
 
+// impl<'a> ConstraintSynthesizer<Pedersen761Field>
+//     for CommonMerkleTreeCircuit<'a, LeafHash, TwoToOneHash, Root, Pedersen761Field, MerkleConfig>
+// {
+//     fn generate_constraints(
+//         self,
+//         cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen761Field>,
+//     ) -> ark_relations::r1cs::Result<()> {
+//         // Allocate parameters as constants
+//         let leaf_crh_params = LeafHashParamsVar::new_constant(cs.clone(), self.leaf_crh_params)?;
+//         let two_to_one_crh_params =
+//             TwoToOneHashParamsVar::new_constant(cs.clone(), self.two_to_one_crh_params)?;
+
+//         // Allocate public inputs
+//         let root =
+//             PedersenRootVar::new_input(ark_relations::ns!(cs, "root_var"), || Ok(&self.root))?;
+
+//         let hashed_leaf: PedersenLeafVar =
+//             PedersenLeafVar::new_input(ark_relations::ns!(cs, "leaf_var"), || Ok(&self.leaf_hash))?;
+
+//         // Allocate path as witness
+//         let path: PedersenPathVar =
+//             PedersenPathVar::new_witness(ark_relations::ns!(cs, "path_witness"), || {
+//                 self.authentication_path
+//                     .as_ref()
+//                     .ok_or(SynthesisError::AssignmentMissing)
+//             })?;
+
+//         let is_member: Boolean<Pedersen761Field> = path.verify_membership(
+//             &leaf_crh_params,
+//             &two_to_one_crh_params,
+//             &root,
+//             &hashed_leaf,
+//         )?;
+
+//         is_member.enforce_equal(&Boolean::TRUE)?;
+
+//         Ok(())
+//     }
+// }
+
 #[cfg(test)]
 mod tests {
     use ark_crypto_primitives::{crh::TwoToOneCRH, CRH};
     use ark_relations::r1cs::ConstraintSynthesizer;
 
     use crate::{
-        member::Member,
-        pedersen381::{
+        commitments::pedersen761::{
             common::{LeafHash, MembershipTree, MerkleConfig, MerklePath, TwoToOneHash},
             constraint::MerkleTreeCircuit,
         },
+        member::Member,
     };
 
     #[test]
