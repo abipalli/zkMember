@@ -1,11 +1,8 @@
 use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
-use ark_relations::r1cs::ConstraintSynthesizer;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_snark::SNARK;
 use dialoguer::{theme::ColorfulTheme, Select};
-use rand::Rng;
-use zkmember::commitments::MerkleTreeCircuit as CommonMerkleTreeCircuit;
 use zkmember::member::{generate_members, Member};
 
 // Conditional imports for pedersen modules
@@ -16,7 +13,7 @@ mod pedersen381 {
         common::{
             new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
         },
-        MerkleConfig, MerkleTreeCircuit,
+        MerkleTreeCircuit,
     };
     pub type Curve = Bls12_381;
 }

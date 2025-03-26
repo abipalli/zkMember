@@ -2,7 +2,6 @@ use super::common::{
     LeafHash, LeafHashGadget, LeafHashParamsVar, MerkleConfig, MerklePath, Pedersen381Field, Root,
     TwoToOneHash, TwoToOneHashGadget, TwoToOneHashParamsVar,
 };
-use crate::commitments::MerkleTreeCircuit as CommonMerkleTreeCircuit;
 use ark_crypto_primitives::{
     crh::{CRHGadget, TwoToOneCRH, TwoToOneCRHGadget},
     PathVar, CRH,
