@@ -15,6 +15,7 @@ ark-serialize = { version = "^0.3.0", default-features = false, features = [
 ] }
 ark-crypto-primitives = { version = "^0.3.0", default-features = true, features = [
 	"r1cs",
+	"parallel",
 ] }
 
 ark-groth16 = "^0.3.0"
