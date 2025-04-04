@@ -23,8 +23,8 @@ impl ark_ff::bytes::ToBytes for Member {
 impl Default for Member {
     fn default() -> Self {
         Member {
-            id: "123456789".to_string(),
-            email: "example@usc.edu".to_string(),
+            id: "".to_string(),
+            email: "".to_string(),
             join_date: chrono::offset::Utc::now(),
             end_date: None,
             padding: None,
@@ -45,7 +45,7 @@ impl Member {
         }
     }
 
-    pub fn with_padding(
+    pub fn new_with_padding(
         id: String,
         email: String,
         end_date: Option<DateTime<Utc>>,
@@ -158,6 +158,14 @@ pub fn generate_members(members: &mut Box<Vec<Member>>, amount: u32) {
         let id = format!("{}", i);
         let email = format!("{}@usc.edu", i);
         members.push(Member::new(id, email, None));
+    }
+    println!("\x1b[0;34mNumber of Members: {}\x1b[0m", members.len());
+}
+pub fn generate_members_with_padding(members: &mut Box<Vec<Member>>, amount: u32, padding: usize) {
+    for i in 1..amount + 1 {
+        let id = format!("{}", i);
+        let email = format!("{}@usc.edu", i);
+        members.push(Member::new_with_padding(id, email, None, padding));
     }
     println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 }

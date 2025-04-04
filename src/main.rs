@@ -76,7 +76,7 @@ fn main() {
                     .interact_text()
                     .unwrap();
                 // members.push(Member::new(id.into(), email.into(), None));
-                members.push(Member::with_padding(id.into(), email.into(), None, 10)); // testing member with padding
+                members.push(Member::new_with_padding(id.into(), email.into(), None, 10)); // testing member with padding
                 println!("\x1b[0;32mNumber of Members: {}\x1b[0m", members.len());
 
                 let mut leaves = members
@@ -119,20 +119,6 @@ fn main() {
                         leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
                         authentication_path: Some(path),
                     };
-
-                    // let circuit = CommonMerkleTreeCircuit::<
-                    //     PedersenField,
-                    //     LeafHash,
-                    //     Root,
-                    //     TwoToOneHash,
-                    //     MerkleConfig,
-                    // > {
-                    //     leaf_crh_params: &leaf_crh_params.clone(),
-                    //     two_to_one_crh_params: &two_to_one_crh_params.clone(),
-                    //     root,
-                    //     leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
-                    //     authentication_path: Some(path),
-                    // };
 
                     let (pk, vk) =
                         Groth16::<Curve>::circuit_specific_setup(circuit.clone(), &mut rng)
