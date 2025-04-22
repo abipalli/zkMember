@@ -1,6 +1,9 @@
 pub mod common;
 pub mod constraint;
 
+pub use common::*;
+pub use constraint::*;
+
 #[cfg(test)]
 mod groth16_tests {
     use super::common::*;

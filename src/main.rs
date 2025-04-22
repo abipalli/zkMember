@@ -1,19 +1,10 @@
-use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
-use ark_groth16::{Groth16, Proof, VerifyingKey};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_snark::SNARK;
-use dialoguer::{theme::ColorfulTheme, Select};
-use zkmember::member::{generate_members, Member};
-
 // Conditional imports for pedersen modules
 #[cfg(feature = "pedersen381")]
 mod pedersen381 {
     pub use ark_bls12_381::Bls12_381;
     pub use zkmember::commitments::pedersen381::{
-        common::{
-            new_membership_tree, LeafHash, Pedersen381Field as PedersenField, Root, TwoToOneHash,
-        },
-        MerkleTreeCircuit,
+        new_membership_tree, LeafHash, MerkleTreeCircuit, Pedersen381Field as PedersenField, Root,
+        TwoToOneHash,
     };
     pub type Curve = Bls12_381;
 }
@@ -25,18 +16,29 @@ use pedersen381::*;
 mod pedersen761 {
     pub use ark_bw6_761::BW6_761;
     pub use zkmember::commitments::pedersen761::{
-        common::{
-            new_membership_tree, LeafHash, Pedersen761Field as PedersenField, Root, TwoToOneHash,
-        },
-        MerkleConfig, MerkleTreeCircuit,
+        new_membership_tree, LeafHash, MerkleTreeCircuit, Pedersen761Field as PedersenField, Root,
+        TwoToOneHash,
     };
     pub type Curve = BW6_761;
 }
 #[cfg(feature = "pedersen761")]
 use pedersen761::*;
 
-fn main() {
-    let mut members: Box<Vec<Member>> = Box::new(Vec::<Member>::new());
+#[cfg(feature = "cli")]
+mod cli {
+    use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
+    use ark_groth16::{Groth16, Proof, VerifyingKey};
+    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+    use ark_snark::SNARK;
+    use dialoguer::{theme::ColorfulTheme, Select};
+    use zkmember::member::{generate_members, Member};
+}
+#[cfg(feature = "cli")]
+use cli::*;
+
+#[cfg(all(feature = "cli", any(feature = "pedersen381", feature = "pedersen761")))]
+fn exec_cli() {
+    let mut members: Box<Vec<cli::Member>> = Box::new(Vec::<cli::Member>::new());
 
     let mut rng = ark_std::test_rng();
 
@@ -83,8 +85,11 @@ fn main() {
                     .iter()
                     .map(|member| member.hash::<LeafHash>(&leaf_crh_params))
                     .collect::<Vec<_>>();
-                let tree =
-                    new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &mut leaves);
+                let tree = new_membership_tree(
+                    &leaf_crh_params,
+                    &two_to_one_crh_params.clone(),
+                    &mut leaves,
+                );
 
                 root = Some(tree.root());
 
@@ -105,16 +110,19 @@ fn main() {
                         .iter()
                         .map(|member| member.hash::<LeafHash>(&leaf_crh_params))
                         .collect::<Vec<_>>();
-                    let tree =
-                        new_membership_tree(&leaf_crh_params, &two_to_one_crh_params, &mut leaves);
+                    let tree = new_membership_tree(
+                        &leaf_crh_params,
+                        &two_to_one_crh_params.clone(),
+                        &mut leaves,
+                    );
 
                     let root = tree.root();
                     let path = tree.generate_proof(index).unwrap();
                     let member = members.get(index).unwrap();
 
                     let circuit = MerkleTreeCircuit {
-                        leaf_crh_params: &leaf_crh_params,
-                        two_to_one_crh_params: &two_to_one_crh_params,
+                        leaf_crh_params: leaf_crh_params.clone(),
+                        two_to_one_crh_params: two_to_one_crh_params.clone(),
                         root,
                         leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
                         authentication_path: Some(path),
@@ -214,4 +222,9 @@ fn main() {
         }
         println!()
     }
+}
+
+pub fn main() {
+    #[cfg(feature = "cli")]
+    exec_cli();
 }

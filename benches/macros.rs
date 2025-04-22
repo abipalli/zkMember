@@ -85,16 +85,24 @@ macro_rules! bench_groth16 {
 
 #[macro_export]
 macro_rules! bench_marlin {
-    ($module:ident, $curve:ident, $num_members:expr) => {
-        // use $module::{
-        //     common::{new_membership_tree, LeafHash, TwoToOneHash},
-        //     constraint::MerkleTreeCircuit,
-        // };
-
-        // use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
+    ($module:ident, $curve:ident, $field:ident, $num_members:expr) => {
+        use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
         use ark_marlin::Marlin;
         use ark_poly::univariate::DensePolynomial;
         use ark_poly_commit::marlin_pc::MarlinKZG10;
+        use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem};
+        use blake2::Blake2s;
+        use criterion::{black_box, Criterion};
+        use rand::Rng;
+        use $module::{
+            common::{new_membership_tree, LeafHash, TwoToOneHash},
+            constraint::MerkleTreeCircuit,
+        };
+
+        use zkmember::member::{generate_members, Member};
+
+        type PC = MarlinKZG10<$curve, DensePolynomial<$field>>;
+        type MarlinM = Marlin<$field, PC, Blake2s>;
 
         pub fn bench_marlin(c: &mut Criterion) {
             const TEST_MEMBERS_COUNT: usize = $num_members as usize;
@@ -104,7 +112,7 @@ macro_rules! bench_marlin {
             let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
             let two_to_one_crh_params = <TwoToOneHash as TwoToOneCRH>::setup(&mut rng).unwrap();
 
-            // Generate mock members
+            // Generate members
             let mut members = Box::new(vec![]);
             generate_members(&mut members, TEST_MEMBERS_COUNT as u32);
 
@@ -125,34 +133,45 @@ macro_rules! bench_marlin {
 
             // Initialize circuit constraints struct for merkle tree
             let circuit = MerkleTreeCircuit {
-                leaf_crh_params: &leaf_crh_params,
-                two_to_one_crh_params: &two_to_one_crh_params,
+                leaf_crh_params: leaf_crh_params.clone(),
+                two_to_one_crh_params: two_to_one_crh_params,
                 root,
                 leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
                 authentication_path: Some(path),
             };
 
-            type MarlinInst = Marlin<
-                $curve,
-                DensePolynomial<<$curve as ark_ec::PairingEngine>::Fr>,
-                MarlinKZG10<$curve, DensePolynomial<<$curve as ark_ec::PairingEngine>::Fr>>,
-            >;
+            let cs = ConstraintSystem::<Fr>::new_ref();
+            circuit.clone().generate_constraints(cs.clone()).unwrap();
 
-            let universal_srs =
-                MarlinInst::universal_setup(TEST_MEMBERS_COUNT, 2, 2, &mut rng).unwrap();
-            let (pk, vk) = MarlinInst::index(&universal_srs, circuit.clone()).unwrap();
+            // NOTE: Correctness requires every later circuit to satisfy:
+            //  - rows ≤ num_constraints
+            let n_constraints = cs.num_constraints();
+            //  - vars ≤ num_variables
+            let n_variables = cs.num_instance_variables() + cs.num_witness_variables();
+            //  - non-zeros ≤ num_non_zero
+            let n_non_zero = 5 * n_constraints;
+
+            let srs = MarlinM::universal_setup(
+                n_constraints.next_power_of_two(), // round up   ▸ security proof assumes power‑of‑two
+                n_variables.next_power_of_two(),
+                n_non_zero.next_power_of_two(),
+                &mut rng,
+            )
+            .unwrap();
+
+            let (pk, vk) = MarlinM::index(&srs, circuit.clone()).unwrap();
 
             c.bench_function(
                 format!("{}_marlin_prove", stringify!($curve)).as_str(),
                 |b| {
                     b.iter(|| {
-                        let proof = MarlinInst::prove(&pk, circuit.clone(), &mut rng).unwrap();
+                        let proof = MarlinM::prove(&pk.clone(), circuit.clone(), &mut rng).unwrap();
                         black_box(proof);
                     });
                 },
             );
 
-            let proof = MarlinInst::prove(&pk, circuit, &mut rng).unwrap();
+            let proof = MarlinM::prove(&pk, circuit, &mut rng).unwrap();
             let public_input = vec![root, member.hash::<LeafHash>(&leaf_crh_params)];
 
             c.bench_function(
@@ -160,7 +179,7 @@ macro_rules! bench_marlin {
                 |b| {
                     b.iter(|| {
                         let is_valid =
-                            MarlinInst::verify(&vk, &public_input, &proof, &mut rng).unwrap();
+                            MarlinM::verify(&vk.clone(), &public_input, &proof, &mut rng).unwrap();
                         assert!(is_valid);
                     });
                 },

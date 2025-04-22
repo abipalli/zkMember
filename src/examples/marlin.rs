@@ -1,6 +1,5 @@
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_crypto_primitives::{crh::TwoToOneCRH, CRH};
-use ark_ff::{Fp256, ToConstraintField};
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::marlin_pc::MarlinKZG10;
@@ -12,7 +11,7 @@ use crate::commitments::pedersen381::{
         new_membership_tree, LeafHash, MembershipTree, MerklePath, Pedersen381Field, Root,
         TwoToOneHash,
     },
-    constraint, MerkleTreeCircuit,
+    MerkleTreeCircuit,
 };
 
 type PC = MarlinKZG10<Bls12_381, DensePolynomial<Fr>>;

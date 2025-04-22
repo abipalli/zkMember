@@ -17,11 +17,10 @@ ark-crypto-primitives = { version = "^0.3.0", default-features = true, features 
 	"r1cs",
 	"parallel",
 ] }
-
+ark-bn254 = { version = "^0.3" }
 ark-groth16 = "^0.3.0"
 ark-marlin = "^0.3.0"
 ark-gm17 = "^0.3.0"
-
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-ed-on-bls12-381 = { version = "^0.3.0", features = ["r1cs"] }
@@ -30,40 +29,50 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [
 ] }
 ark-ed-on-bw6-761 = { version = "^0.3.0", features = ["r1cs"] }
 ark-bw6-761 = { version = "^0.3.0" }
-
-
-tracing = { version = "0.1", default-features = false, features = [
-	"attributes",
-] }
-tracing-subscriber = { version = "0.2" }
-ark-bn254 = { version = "^0.3" }
-clap = { version = "4.5.31", features = ["cargo", "derive"] }
-bincode = "1.3.3"
-serde = { version = "1.0.218", features = ["derive"] }
-dialoguer = "0.11.0"
-hex = "0.4.3"
-serde_json = { version = "1.0.140", optional = true }
-rand = "0.9.0"
 ark-bls12-377 = { version = "^0.3", features = ["r1cs"] }
 ark-poly-commit = { version = "^0.3", features = ["ark-r1cs-std", "r1cs"] }
 ark-poly = "^0.3"
 blake2 = { version = "0.9", default-features = false }
 
+tracing = { version = "0.1", default-features = false, features = [
+	"attributes",
+] }
+tracing-subscriber = { version = "0.2" }
+clap = { version = "4.5.31", features = ["cargo", "derive"] }
+bincode = "1.3.3"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = { version = "1.0.140" }
+dialoguer = { version = "0.11.0" }
+
+hex = "0.4.3"
+rand = "0.9.0"
+
 [features]
-default = ["serde", "pedersen381"]
-serde = ["serde_json"]
+default = []
+generic = []
 pedersen381 = []
 pedersen761 = []
-benchmark = ["pedersen381", "pedersen761"]
+cli = []
 
 [[bin]]
-name = "zkmember"
+name = "pedersen381"
 path = "src/main.rs"
+features = ["cli", "pedersen381"]
+
+[[bin]]
+name = "pedersen761"
+path = "src/main.rs"
+features = ["cli", "pedersen761"]
 
 [dev-dependencies]
 criterion = "0.5.1"
 
 [[bench]]
-name = "pedersen"
+name = "groth16"
 harness = false
-path = "benches/pedersen.rs"
+path = "benches/groth16.rs"
+
+[[bench]]
+name = "marlin"
+harness = false
+path = "benches/marlin.rs"

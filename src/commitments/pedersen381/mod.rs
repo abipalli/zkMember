@@ -1,5 +1,7 @@
 pub mod common; // TODO: module should be private
 pub mod constraint; // TODO: module should be private
+
+pub use common::*;
 pub use constraint::*;
 
 #[cfg(test)]
