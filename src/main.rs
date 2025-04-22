@@ -1,3 +1,6 @@
+#[cfg(feature = "cli")]
+compile_error!("CLI feature not stable");
+
 // Conditional imports for pedersen modules
 #[cfg(feature = "pedersen381")]
 mod pedersen381 {
@@ -227,4 +230,7 @@ fn exec_cli() {
 pub fn main() {
     #[cfg(feature = "cli")]
     exec_cli();
+
+    #[cfg(not(feature = "cli"))]
+    println!("CLI feature is not enabled. Please enable it to run the CLI.");
 }
