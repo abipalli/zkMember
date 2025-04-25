@@ -21,10 +21,10 @@ pub type PedersenPathVar =
     PathVar<MerkleConfig, LeafHashGadget, TwoToOneHashGadget, Pedersen761Field>;
 
 #[derive(Clone)]
-pub struct MerkleTreeCircuit<'a> {
+pub struct MerkleTreeCircuit {
     // constants that will be embedded into the circuit
-    pub leaf_crh_params: &'a <LeafHash as CRH>::Parameters,
-    pub two_to_one_crh_params: &'a <TwoToOneHash as TwoToOneCRH>::Parameters,
+    pub leaf_crh_params: <LeafHash as CRH>::Parameters,
+    pub two_to_one_crh_params: <TwoToOneHash as TwoToOneCRH>::Parameters,
 
     // These are the public inputs to the circuit
     pub root: Root,
@@ -34,7 +34,7 @@ pub struct MerkleTreeCircuit<'a> {
     pub authentication_path: Option<MerklePath>,
 }
 
-impl<'a> ConstraintSynthesizer<Pedersen761Field> for MerkleTreeCircuit<'a> {
+impl ConstraintSynthesizer<Pedersen761Field> for MerkleTreeCircuit {
     fn generate_constraints(
         self,
         cs: ark_relations::r1cs::ConstraintSystemRef<Pedersen761Field>,
@@ -72,7 +72,7 @@ impl<'a> ConstraintSynthesizer<Pedersen761Field> for MerkleTreeCircuit<'a> {
     }
 }
 
-// impl<'a> ConstraintSynthesizer<Pedersen761Field>
+// impl ConstraintSynthesizer<Pedersen761Field>
 //     for CommonMerkleTreeCircuit<'a, LeafHash, TwoToOneHash, Root, Pedersen761Field, MerkleConfig>
 // {
 //     fn generate_constraints(
@@ -160,8 +160,8 @@ mod tests {
 
         let circuit = MerkleTreeCircuit {
             // constants
-            leaf_crh_params: &leaf_crh_params,
-            two_to_one_crh_params: &two_to_one_crh_params,
+            leaf_crh_params: leaf_crh_params.clone(),
+            two_to_one_crh_params: two_to_one_crh_params,
 
             // public inputs
             root,
@@ -249,8 +249,8 @@ mod tests {
 
         let circuit = MerkleTreeCircuit {
             // constants
-            leaf_crh_params: &leaf_crh_params,
-            two_to_one_crh_params: &two_to_one_crh_params,
+            leaf_crh_params: leaf_crh_params.clone(),
+            two_to_one_crh_params: two_to_one_crh_params,
 
             // public inputs
             root: wrong_root,

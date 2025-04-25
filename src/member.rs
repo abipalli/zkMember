@@ -33,8 +33,6 @@ impl Default for Member {
 }
 
 impl Member {
-    /// Create a new member
-
     pub fn new(id: String, email: String, end_date: Option<DateTime<Utc>>) -> Self {
         Self {
             id,
@@ -89,7 +87,6 @@ impl Member {
     }
 }
 
-#[cfg(feature = "serde")]
 impl serde::Serialize for Member {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -108,7 +105,6 @@ impl serde::Serialize for Member {
     }
 }
 
-#[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Member {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

@@ -1,13 +1,16 @@
 pub mod common; // TODO: module should be private
-pub use common::*;
 pub mod constraint; // TODO: module should be private
+
+pub use common::*;
 pub use constraint::*;
 
 #[cfg(test)]
 mod groth16_tests {
-    use super::common::*;
     use super::constraint::*;
-    use crate::member::Member;
+    use crate::{
+        commitments::pedersen381::common::{new_membership_tree, LeafHash, TwoToOneHash},
+        member::Member,
+    };
     use ark_bls12_381::Bls12_381;
     use ark_crypto_primitives::{CRH, SNARK};
     use ark_groth16::Groth16;
@@ -46,8 +49,8 @@ mod groth16_tests {
 
         // Create circuit
         let circuit = MerkleTreeCircuit {
-            leaf_crh_params: &leaf_crh_params,
-            two_to_one_crh_params: &two_to_one_crh_params,
+            leaf_crh_params: leaf_crh_params.clone(),
+            two_to_one_crh_params: two_to_one_crh_params,
             root,
             leaf_hash: members[1].hash::<LeafHash>(&leaf_crh_params),
             authentication_path: Some(merkle_path),
