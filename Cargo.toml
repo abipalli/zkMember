@@ -2,6 +2,7 @@
 name = "zkmember"
 version = "0.1.0"
 edition = "2021"
+default-run = "zkmember"
 
 [dependencies]
 chrono = "0.4.40"
@@ -47,6 +48,9 @@ dialoguer = { version = "0.11.0" }
 hex = "0.4.3"
 rand = "0.9.0"
 
+[dev-dependencies]
+criterion = "0.5.1"
+
 [features]
 default = []
 generic = []
@@ -55,17 +59,18 @@ pedersen761 = []
 cli = []
 
 [[bin]]
+name = "zkmember"
+path = "src/main.rs"
+
+[[bin]]
 name = "pedersen381"
 path = "src/main.rs"
-features = ["cli", "pedersen381"]
+required-features = ["pedersen381"]
 
 [[bin]]
 name = "pedersen761"
 path = "src/main.rs"
-features = ["cli", "pedersen761"]
-
-[dev-dependencies]
-criterion = "0.5.1"
+required-features = ["pedersen761"]
 
 [[bench]]
 name = "groth16"
