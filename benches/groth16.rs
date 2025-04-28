@@ -65,15 +65,19 @@ macro_rules! bench_groth16 {
         use zkmember::member::{generate_members, Member};
 
         pub fn bench_groth16(c: &mut Criterion) {
+			let mut rng = ark_std::test_rng();
+			let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
+			let two_to_one_crh_params = <TwoToOneHash as TwoToOneCRH>::setup(&mut rng).unwrap();
+
+			// Max constraints
+			let mut members = Box::new(vec![]);
+			let max_members = [$($num_members),+].iter().max().unwrap();
+			generate_members(&mut members, *max_members);
+
             for &num_members in &[$($num_members),+] {
-                let mut rng = ark_std::test_rng();
+				let members = members[0..num_members].to_vec();
 
-                let leaf_crh_params = <LeafHash as CRH>::setup(&mut rng).unwrap();
-                let two_to_one_crh_params = <TwoToOneHash as TwoToOneCRH>::setup(&mut rng).unwrap();
-
-                // Generate mock members
-                let mut members = Box::new(vec![]);
-                generate_members(&mut members, num_members as u32);
+				println!("{} members", members.len());
 
                 // Hash mock members
                 let mut leaves = members
@@ -94,7 +98,7 @@ macro_rules! bench_groth16 {
                 // Initialize circuit constraints struct for merkle tree
                 let circuit = MerkleTreeCircuit {
                     leaf_crh_params: leaf_crh_params.clone(),
-                    two_to_one_crh_params: two_to_one_crh_params,
+                    two_to_one_crh_params: two_to_one_crh_params.clone(),
                     root,
                     leaf_hash: member.hash::<LeafHash>(&leaf_crh_params),
                     authentication_path: Some(path),
