@@ -57,8 +57,7 @@ criterion_group! {
     targets = marlin761::bench_marlin
 }
 
-// criterion_main!(marlin381_benches, marlin761_benches);
-criterion_main!(marlin381_benches);
+criterion_main!(marlin381_benches, marlin761_benches);
 
 #[macro_export]
 macro_rules! bench_marlin {
