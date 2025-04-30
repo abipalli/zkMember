@@ -27,8 +27,8 @@ mod pedersen761 {
 #[cfg(feature = "pedersen761")]
 use pedersen761::*;
 
-#[cfg(feature = "cli")]
-mod cli {
+#[cfg(any(feature = "pedersen381", feature = "pedersen761"))]
+fn exec_marlin(num_members: usize) {
     use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
     use ark_groth16::{Groth16, Proof, VerifyingKey};
     use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -38,6 +38,14 @@ mod cli {
 }
 #[cfg(feature = "cli")]
 use cli::*;
+
+pub fn main() {
+    #[cfg(feature = "cli")]
+    exec_cli();
+
+    #[cfg(any(feature = "pedersen381", feature = "pedersen761"))]
+    exec_marlin(16);
+}
 
 #[cfg(all(feature = "cli", any(feature = "pedersen381", feature = "pedersen761")))]
 fn exec_cli() {
@@ -225,12 +233,4 @@ fn exec_cli() {
         }
         println!()
     }
-}
-
-pub fn main() {
-    #[cfg(feature = "cli")]
-    exec_cli();
-
-    #[cfg(not(feature = "cli"))]
-    println!("CLI feature is not enabled. Please enable it to run the CLI.");
 }

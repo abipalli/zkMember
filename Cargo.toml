@@ -53,16 +53,17 @@ generic = []
 pedersen381 = []
 pedersen761 = []
 cli = []
+universal-constraints = []
 
 [[bin]]
 name = "pedersen381"
 path = "src/main.rs"
-features = ["cli", "pedersen381"]
+required-features = ["cli", "pedersen381"]
 
 [[bin]]
 name = "pedersen761"
 path = "src/main.rs"
-features = ["cli", "pedersen761"]
+required-features = ["cli", "pedersen761"]
 
 [dev-dependencies]
 criterion = "0.5.1"
