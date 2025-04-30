@@ -16,17 +16,45 @@ The primary goal of ZKMember is to:
 - **Finite Fields**: Utilization of different finite fields to assess their impact on performance.
 - **Benchmarking Tools**: Comprehensive tools to measure and compare the efficiency of each implementation.
 
-## Quick Start
-
+## Installation
 To quickly get started with the ZKMember CLI application, follow these steps:
 
 1. Ensure you have Rust installed. If not, you can install it from [rust-lang.org](https://www.rust-lang.org/).
-2. Clone the repository:
+1. Clone the repository:
 	```sh
 	git clone https://github.com/abipalli/zkmember.git
 	cd zkmember
 	```
-3. Run the CLI application:
+
+## Run Benchmarks
+
+### groth16
+To run the benchmarks for `groth16` circuits, run the following:
+
+```sh
+cargo bench --bench groth16
+```
+
+> `groth16` always uses circuit-specific constraints.
+
+### marlin
+To run the benchmarks for `marlin` circuits with **circuit-specific constraints**, run the following:
+
+```sh
+cargo bench --bench marlin
+```
+
+---
+
+To run the benchmarks for `marlin` circuits with **universal constaraints**, simply add the `universal-constraints` feature:
+```sh
+cargo bench -F universal-constraints --bench marlin
+```
+
+<!--
+## Run CLI
+
+1. Run the CLI application:
 	```sh
 	cargo r
 	```
@@ -57,3 +85,4 @@ path: 85c81b129331338cd18c316ac058cb2924e433abc294b0b21553ad542ba47a1e0000000000
 
 ✔ Choose an option · Exit
 ```
+-->
