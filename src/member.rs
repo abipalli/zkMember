@@ -156,6 +156,7 @@ pub fn generate_members(members: &mut Box<Vec<Member>>, amount: u32) {
         members.push(Member::new(id, email, None));
     }
     println!("\x1b[0;34mNumber of Members: {}\x1b[0m", members.len());
+    println!("\x1b[0;90mNumber of Padded Members: {}\x1b[0m", amount);
 }
 pub fn generate_members_with_padding(members: &mut Box<Vec<Member>>, amount: u32, padding: usize) {
     for i in 1..amount + 1 {
