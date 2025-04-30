@@ -156,7 +156,7 @@ macro_rules! bench_marlin_universal {
 			let n_non_zero = 5 * n_constraints;
 
 			let srs = MarlinM::universal_setup(
-				n_constraints.next_power_of_two(), // round up   ▸ security proof assumes power‑of‑two
+				n_constraints.next_power_of_two(),
 				n_variables.next_power_of_two(),
 				n_non_zero.next_power_of_two(),
 				&mut rng,
@@ -295,7 +295,7 @@ macro_rules! bench_marlin {
 				let n_non_zero = 5 * n_constraints;
 
 				let srs = MarlinM::universal_setup(
-					n_constraints.next_power_of_two(), // round up   ▸ security proof assumes power‑of‑two
+					n_constraints.next_power_of_two(),
 					n_variables.next_power_of_two(),
 					n_non_zero.next_power_of_two(),
 					&mut rng,

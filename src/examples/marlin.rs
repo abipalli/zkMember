@@ -54,7 +54,7 @@ fn create_test_circuit() {
         authentication_path: Some(path),
     };
 
-    /* 4.a  Count constraints to know how big the SRS must be  */
+    // Universal setup for the circuit
     let cs = ConstraintSystem::<Fr>::new_ref();
     circuit.clone().generate_constraints(cs.clone()).unwrap();
 
@@ -66,9 +66,8 @@ fn create_test_circuit() {
     //	- non-zeros ≤ num_non_zero
     let n_non_zero = 5 * n_constraints;
 
-    /* 4.b  Universal setup (re‑use it for all trees of the same depth)           */
     let srs = MarlinM::universal_setup(
-        n_constraints.next_power_of_two(), // round up   ▸ security proof assumes power‑of‑two
+        n_constraints.next_power_of_two(),
         n_variables.next_power_of_two(),
         n_non_zero.next_power_of_two(),
         &mut rng,
